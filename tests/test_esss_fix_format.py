@@ -76,7 +76,7 @@ def test_imports(tmpdir):
             pass
     ''')
     filename = tmpdir.join('test.py')
-    filename.write(source, 'wb')
+    filename.write(source.encode('UTF-8'), 'wb')
 
     check_invalid_file(str(filename))
     fix_invalid_file(str(filename))
@@ -92,7 +92,7 @@ def test_imports(tmpdir):
         class Test:
             pass
     ''')
-    assert filename.read('rb') == expected
+    assert filename.read('rb').decode('UTF-8') == expected
 
 
 def test_unknown_extension(input_file):
