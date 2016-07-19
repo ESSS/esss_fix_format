@@ -39,7 +39,7 @@ def main(files, check, stdin, commit):
             new_contents = fix_whitespace(new_contents)
             changed = new_contents != old_contents
         else:
-            click.secho(click.format_filename(filename) + ': Unknown extension', fg='blue')
+            click.secho(click.format_filename(filename) + ': Unknown extension', fg='white')
             continue
         if not check and changed:
             with io.open(filename, 'wb') as f:
