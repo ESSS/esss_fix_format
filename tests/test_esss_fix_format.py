@@ -49,7 +49,7 @@ def test_stdin_input(input_file):
 
 def test_fix_format(input_file):
     input_contents = input_file.read()
-    obtained = cli.fix_format(str(input_contents))
+    obtained = cli.fix_whitespace(str(input_contents))
     expected = textwrap.dedent(
         r'''\
             alpha

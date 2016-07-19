@@ -17,8 +17,8 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 @click.command()
 @click.argument('files', nargs=-1, type=click.Path(exists=True, dir_okay=False, writable=True))
 @click.option('--check', default=False, is_flag=True, help='check instead of formatting files')
-@click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin')
-@click.option('-c', '--commit', default=False, is_flag=True, help='obtain file names from git')
+@click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
+@click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
 def main(files, check, stdin, commit):
     """Console script for esss_fix_format"""
     import isort
@@ -36,7 +36,7 @@ def main(files, check, stdin, commit):
                 new_contents = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG).output
             else:
                 new_contents = old_contents
-            new_contents = fix_format(new_contents)
+            new_contents = fix_whitespace(new_contents)
             changed = new_contents != old_contents
         else:
             click.secho(click.format_filename(filename) + ': Unknown extension', fg='blue')
@@ -45,14 +45,18 @@ def main(files, check, stdin, commit):
             with io.open(filename, 'wb') as f:
                 f.write(new_contents.encode('UTF-8'))
         changed_files += int(changed)
-        status, color = get_status_and_color(check, changed)
+        status, color = _get_status_and_color(check, changed)
         click.secho(click.format_filename(filename) + ': ' + status, fg=color)
 
     if check and changed_files:
         sys.exit(1)
 
 
-def get_status_and_color(check, changed):
+def _get_status_and_color(check, changed):
+    """
+    Return a pair (status message, color) based if we are checking a file for correct formatting and if
+    the file is supposed to be changed or not.
+    """
     if check:
         if changed:
             return 'Failed', 'red'
@@ -65,14 +69,16 @@ def get_status_and_color(check, changed):
             return 'Skipped', 'yellow'
 
 
-def fix_format(old_contents):
-    '''
+def fix_whitespace(old_contents):
+    """
+    Fix whitespace issues in the given list of lines.
+
     :param unicode old_contents:
         List of lines to fix spaces and indentations.
 
     :return unicode:
         Returns the new contents.
-    '''
+    """
     input_lines = old_contents.split('\n')
     lines = [i.rstrip('\r') for i in input_lines]
     lines = _right_trim_spaces(lines)
@@ -83,7 +89,7 @@ def fix_format(old_contents):
 
 
 def _right_trim_spaces(lines):
-    '''
+    """
     Remove spaces from the right side of each line.
 
     :param list(unicode) lines:
@@ -91,24 +97,25 @@ def _right_trim_spaces(lines):
 
     :return list(unicode):
         Modified lines.
-    '''
+    """
     return [i.rstrip(' \t') for i in lines]
 
 
 def _fix_tabs(lines, tab_width=4):
-    '''
-    Replaces TABS with SPACES.
+    """
+    Expands tab characters in the given list of lines for spaces..
 
     :param list(unicode) lines:
         Input lines.
 
     :return list(unicode):
         Modified lines.
-    '''
-    return [i.replace('\t', ' ' * tab_width) for i in lines]
+    """
+    return [i.expandtabs(tab_width) for i in lines]
 
 
 def get_files_from_git():
+    """Obtain from a list of modified files in the current repository."""
     def get_files(cmd):
         output = subprocess.check_output(cmd, shell=True)
         return output.splitlines()
