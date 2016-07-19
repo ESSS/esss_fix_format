@@ -1,6 +1,7 @@
-pip==8.1.2
-wheel==0.29.0
 flake8==2.6.0
-tox==2.3.1
+mock
+pip==8.1.2
 pytest
 pytest-mock
+tox==2.3.1
+wheel==0.29.0
