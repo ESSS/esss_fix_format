@@ -120,11 +120,12 @@ def get_files_from_git():
         output = subprocess.check_output(cmd, shell=True)
         return output.splitlines()
 
+    root = subprocess.check_output('git rev-parse --show-toplevel', shell=True).strip()
     result = set()
     result.update(get_files('git diff --name-only --diff-filter=ACM --staged'))
     result.update(get_files('git diff --name-only --diff-filter=ACM'))
     result.update(get_files('git ls-files -o --full-name --exclude-standard'))
-    return sorted(result)
+    return sorted(os.path.join(root, x) for x in result)
 
 
 if __name__ == "__main__":

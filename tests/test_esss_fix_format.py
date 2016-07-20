@@ -106,11 +106,19 @@ def test_unknown_extension(input_file):
 
 
 @pytest.mark.parametrize('param', ['-c', '--commit'])
-def test_fix_commit(input_file, mocker, param):
-    m = mocker.patch.object(subprocess, 'check_output', return_value=str(input_file) + '\n')
+def test_fix_commit(input_file, mocker, param, tmpdir):
+
+    def check_output(cmd, *args, **kwargs):
+        if '--show-toplevel' in cmd:
+            return str(tmpdir) + '\n'
+        else:
+            return input_file.basename + '\n'
+
+    m = mocker.patch.object(subprocess, 'check_output', side_effect=check_output)
     output = run([param], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ': Fixed')
     assert m.call_args_list == [
+        mock.call('git rev-parse --show-toplevel', shell=True),
         mock.call('git diff --name-only --diff-filter=ACM --staged', shell=True),
         mock.call('git diff --name-only --diff-filter=ACM', shell=True),
         mock.call('git ls-files -o --full-name --exclude-standard', shell=True),
