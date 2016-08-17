@@ -39,6 +39,15 @@ def test_command_line_interface(input_file):
     fix_valid_file(input_file)
 
 
+def test_directory_command_line(input_file, tmpdir):
+    another_file = tmpdir.join('subdir', 'test2.py').ensure(file=1)
+    input_file.copy(another_file)
+
+    output = run([str(tmpdir)], expected_exit=0)
+    output.fnmatch_lines(str(input_file) + ': Fixed')
+    output.fnmatch_lines(str(another_file) + ': Fixed')
+
+
 @pytest.mark.xfail(reason='this is locking up during main(), although it works on the cmdline', run=False)
 def test_stdin_input(input_file):
     runner = CliRunner()

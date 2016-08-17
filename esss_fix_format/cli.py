@@ -15,17 +15,25 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 
 
 @click.command()
-@click.argument('files', nargs=-1, type=click.Path(exists=True, dir_okay=False, writable=True))
-@click.option('--check', default=False, is_flag=True, help='check instead of formatting files')
+@click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True, dir_okay=True, writable=True))
+@click.option('--check', default=False, is_flag=True, help='check if files are correctly formatted')
 @click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
 @click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
-def main(files, check, stdin, commit):
+def main(files_or_directories, check, stdin, commit):
     """Fixes and checks formatting according to ESSS standards."""
     import isort
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
-    if commit:
+    elif commit:
         files = get_files_from_git()
+    else:
+        files = []
+        for file_or_dir in files_or_directories:
+            if os.path.isdir(file_or_dir):
+                for root, dirs, names in os.walk(file_or_dir):
+                    files.extend(os.path.join(root, n) for n in names if os.path.splitext(n)[1] in EXTENSIONS)
+            else:
+                files.append(file_or_dir)
     changed_files = 0
     for filename in files:
         extension = os.path.splitext(filename)[1]
