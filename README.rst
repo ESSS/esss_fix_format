@@ -22,9 +22,10 @@ Usage
 This repository provides a tool ``fix-format`` (or ``ff`` for short) which can be used to format files automatically
 or check if some files are already formatted (usually in a ``pre-commit`` hook).
 
-1. To manually format files::
+1. To manually format files and/or directories::
 
-    fix-format <file1> <file2> ...
+    fix-format <file1> <dir1> ...
+
 
 2. Format modified files in Git::
 

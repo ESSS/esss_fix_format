@@ -20,7 +20,7 @@ def input_file(tmpdir):
             bravo\s\t\s
             charlie
             \tdelta
-            echo\r
+            echo
             foxtrot
             golf #Comment
             hotel
@@ -37,6 +37,24 @@ def test_command_line_interface(input_file):
 
     check_valid_file(input_file)
     fix_valid_file(input_file)
+
+
+@pytest.mark.parametrize('eol', [b'\n', b'\r\n', b'\r'])
+def test_input_eol_preserved(input_file, eol):
+    contents = input_file.read('rb')
+    contents = contents.replace(b'\n', eol)
+    input_file.write(contents, 'wb')
+    check_invalid_file(input_file)
+    fix_invalid_file(input_file)
+
+
+def test_directory_command_line(input_file, tmpdir):
+    another_file = tmpdir.join('subdir', 'test2.py').ensure(file=1)
+    input_file.copy(another_file)
+
+    output = run([str(tmpdir)], expected_exit=0)
+    output.fnmatch_lines(str(input_file) + ': Fixed')
+    output.fnmatch_lines(str(another_file) + ': Fixed')
 
 
 @pytest.mark.xfail(reason='this is locking up during main(), although it works on the cmdline', run=False)
@@ -76,7 +94,7 @@ def test_imports(tmpdir):
             pass
     ''')
     filename = tmpdir.join('test.py')
-    filename.write(source.encode('UTF-8'), 'wb')
+    filename.write(source, 'w')
 
     check_invalid_file(str(filename))
     fix_invalid_file(str(filename))
@@ -92,7 +110,7 @@ def test_imports(tmpdir):
         class Test:
             pass
     ''')
-    assert filename.read('rb').decode('UTF-8') == expected
+    assert filename.read('r') == expected
 
 
 def test_unknown_extension(input_file):
