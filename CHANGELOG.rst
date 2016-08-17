@@ -2,8 +2,8 @@
 History
 =======
 
-1.1.0.dev
----------
+1.1.0
+-----
 
 * Add support for passing directories in the command line.
 
