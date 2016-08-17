@@ -20,7 +20,7 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 @click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
 @click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
 def main(files, check, stdin, commit):
-    """Console script for esss_fix_format"""
+    """Fixes and checks formatting according to ESSS standards."""
     import isort
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
