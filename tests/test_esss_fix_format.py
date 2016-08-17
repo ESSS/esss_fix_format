@@ -39,6 +39,15 @@ def test_command_line_interface(input_file):
     fix_valid_file(input_file)
 
 
+@pytest.mark.parametrize('eol', [b'\n', b'\r\n', b'\r'])
+def test_input_eol_preserved(input_file, eol):
+    contents = input_file.read('rb')
+    contents = contents.replace(b'\n', eol)
+    input_file.write(contents, 'wb')
+    check_invalid_file(input_file)
+    fix_invalid_file(input_file)
+
+
 def test_directory_command_line(input_file, tmpdir):
     another_file = tmpdir.join('subdir', 'test2.py').ensure(file=1)
     input_file.copy(another_file)
