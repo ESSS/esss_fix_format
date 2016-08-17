@@ -37,11 +37,19 @@ def main(files_or_directories, check, stdin, commit):
             else:
                 files.append(file_or_dir)
     changed_files = 0
+    errors = []
     for filename in files:
         extension = os.path.splitext(filename)[1]
         if extension in EXTENSIONS:
             with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
-                old_contents = f.read()
+                try:
+                    old_contents = f.read()
+                except UnicodeDecodeError as e:
+                    msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+                    error_msg = click.format_filename(filename) + msg
+                    click.secho(error_msg, fg='red')
+                    errors.append(error_msg)
+                    continue
             if extension == '.py':
                 new_contents = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG).output
             else:
@@ -54,10 +62,18 @@ def main(files_or_directories, check, stdin, commit):
         if not check and changed:
             with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
                 f.write(new_contents)
+
         changed_files += int(changed)
         status, color = _get_status_and_color(check, changed)
         click.secho(click.format_filename(filename) + ': ' + status, fg=color)
 
+    if errors:
+        click.secho('')
+        h = '=' * 30
+        click.secho(h + ' ERRORS ' + h, fg='red')
+        for error_msg in errors:
+            click.secho(error_msg, fg='red')
+        sys.exit(1)
     if check and changed_files:
         sys.exit(1)
 
@@ -108,12 +124,12 @@ def _split_lines_and_original_eol(contents):
         a boolean which indicates if the last line ends with a new line or not.
     """
     lines = contents.splitlines(True)
-    eol = '\n'
+    eol = u'\n'
     if lines:
-        if lines[0].endswith('\r'):
-            eol = '\r'
-        elif lines[0].endswith('\r\n'):
-            eol = '\r\n'
+        if lines[0].endswith(u'\r'):
+            eol = u'\r'
+        elif lines[0].endswith(u'\r\n'):
+            eol = u'\r\n'
     ends_with_eol = contents.endswith(eol)
     lines = [i.rstrip() for i in lines]
     return lines, eol, ends_with_eol

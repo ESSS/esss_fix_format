@@ -143,6 +143,23 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
     ]
 
 
+def test_input_invalid_codec(tmpdir):
+    """Display error summary when we fail to open a file"""
+    filename = tmpdir.join('test.py')
+    filename.write(u'hello world'.encode('UTF-16'), 'wb')
+    output = run([str(filename)], expected_exit=1)
+    output.fnmatch_lines(str(filename) + ': ERROR (Unicode*')
+    output.fnmatch_lines('*== ERRORS ==*')
+    output.fnmatch_lines(str(filename) + ': ERROR (Unicode*')
+
+
+def test_empty_file(tmpdir):
+    """Ensure files with a single empty line do not raise an error"""
+    filename = tmpdir.join('test.py')
+    filename.write(u'\r\n', 'w')
+    run([str(filename)], expected_exit=0)
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()

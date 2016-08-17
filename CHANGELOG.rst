@@ -2,6 +2,13 @@
 History
 =======
 
+1.1.1
+-----
+
+* Display error summary at the end in case some error happens when fixing files.
+
+* Fix bug when a file contained a single empty line.
+
 1.1.0
 -----
 
