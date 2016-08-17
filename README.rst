@@ -3,7 +3,7 @@ esss_fix_format
 ===============================
 
 
-.. image:: https://img.shields.io/travis/esss/esss_fix_format.svg
+.. image:: https://img.shields.io/travis/ESSS/esss_fix_format/master.svg
         :target: https://travis-ci.org/esss/esss_fix_format
 
 
