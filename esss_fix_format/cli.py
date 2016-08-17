@@ -30,8 +30,8 @@ def main(files, check, stdin, commit):
     for filename in files:
         extension = os.path.splitext(filename)[1]
         if extension in EXTENSIONS:
-            with io.open(filename, 'rb') as f:
-                old_contents = f.read().decode('UTF-8')
+            with io.open(filename, 'r', encoding='UTF-8') as f:
+                old_contents = f.read()
             if extension == '.py':
                 new_contents = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG).output
             else:
@@ -42,8 +42,8 @@ def main(files, check, stdin, commit):
             click.secho(click.format_filename(filename) + ': Unknown extension', fg='white')
             continue
         if not check and changed:
-            with io.open(filename, 'wb') as f:
-                f.write(new_contents.encode('UTF-8'))
+            with io.open(filename, 'w', encoding='UTF-8') as f:
+                f.write(new_contents)
         changed_files += int(changed)
         status, color = _get_status_and_color(check, changed)
         click.secho(click.format_filename(filename) + ': ' + status, fg=color)
@@ -79,8 +79,7 @@ def fix_whitespace(old_contents):
     :return unicode:
         Returns the new contents.
     """
-    input_lines = old_contents.split('\n')
-    lines = [i.rstrip('\r') for i in input_lines]
+    lines = old_contents.split('\n')
     lines = _right_trim_spaces(lines)
     lines = _fix_tabs(lines)
     contents = '\n'.join(lines)
