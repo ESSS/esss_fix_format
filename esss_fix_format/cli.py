@@ -38,7 +38,7 @@ def main(files_or_directories, check, stdin, commit):
     for filename in files:
         extension = os.path.splitext(filename)[1]
         if extension in EXTENSIONS:
-            with io.open(filename, 'r', encoding='UTF-8') as f:
+            with io.open(filename, 'rU', encoding='UTF-8') as f:
                 old_contents = f.read()
             if extension == '.py':
                 new_contents = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG).output
