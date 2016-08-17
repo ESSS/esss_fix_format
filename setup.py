@@ -6,8 +6,8 @@ from setuptools import setup
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
-    history = history_file.read()
+with open('CHANGELOG.rst') as changelog_file:
+    changelog = changelog_file.read()
 
 requirements = [
     'Click>=6.0',
@@ -21,7 +21,7 @@ setup(
     name='esss_fix_format',
     version='1.0.0',
     description="ESSS code formatter and checker",
-    long_description=readme + '\n\n' + history,
+    long_description=readme + '\n\n' + changelog,
     author="Bruno Oliveira",
     author_email='bruno@esss.com.br',
     url='https://github.com/esss/esss_fix_format',

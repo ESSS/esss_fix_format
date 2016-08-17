@@ -15,7 +15,8 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 
 
 @click.command()
-@click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True, dir_okay=True, writable=True))
+@click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True,
+                                                                  dir_okay=True, writable=True))
 @click.option('--check', default=False, is_flag=True, help='check if files are correctly formatted')
 @click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
 @click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
@@ -31,7 +32,8 @@ def main(files_or_directories, check, stdin, commit):
         for file_or_dir in files_or_directories:
             if os.path.isdir(file_or_dir):
                 for root, dirs, names in os.walk(file_or_dir):
-                    files.extend(os.path.join(root, n) for n in names if os.path.splitext(n)[1] in EXTENSIONS)
+                    files.extend(os.path.join(root, n) for n in names
+                                 if os.path.splitext(n)[1] in EXTENSIONS)
             else:
                 files.append(file_or_dir)
     changed_files = 0
@@ -62,8 +64,8 @@ def main(files_or_directories, check, stdin, commit):
 
 def _get_status_and_color(check, changed):
     """
-    Return a pair (status message, color) based if we are checking a file for correct formatting and if
-    the file is supposed to be changed or not.
+    Return a pair (status message, color) based if we are checking a file for correct
+    formatting and if the file is supposed to be changed or not.
     """
     if check:
         if changed:

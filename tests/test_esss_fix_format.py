@@ -57,7 +57,7 @@ def test_directory_command_line(input_file, tmpdir):
     output.fnmatch_lines(str(another_file) + ': Fixed')
 
 
-@pytest.mark.xfail(reason='this is locking up during main(), although it works on the cmdline', run=False)
+@pytest.mark.xfail(reason='this is locking up during main(), but works on the cmdline', run=False)
 def test_stdin_input(input_file):
     runner = CliRunner()
     result = runner.invoke(cli.main, args=['--stdin'], input=str(input_file) + '\n')
