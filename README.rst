@@ -61,8 +61,79 @@ or check if some files are already formatted (usually in a ``pre-commit`` hook).
     fi
 
 
+Migrating a project to use fix-format
+-------------------------------------
+
+Follow this steps to re format an entire project and start using the pre-commit hook:
+
+1. Search for all usages of ``coilib50.LoadCppModule`` function, and for each file that
+   uses it add ``isort:skipfile`` to the docstring:
+
+    .. code-block:: python
+
+        """
+        module docstring contents..*:
+
+        isort:skip_file
+        """
+
+   Commit using ``-n`` to skip the current hook.
+
+2. If there are any sensitive imports in your code which you wouldn't like to ``ff`` to touch, use
+   a comment to prevent ``isort`` from touching it:
+
+    .. code-block:: python
+
+        ConfigurePyroSettings()  # must be called before importing Pyro4
+        import Pyro4  # isort:skip
+
+3. Execute:
+
+    .. code-block:: sh
+
+        $ ff /path/to/repo/root
+
+   After it completes, make sure there are no problems with the files:
+
+    .. code-block:: sh
+
+        $ ff /path/to/repo/root --check
+
+   .. note::
+        if the check fails, try running it again; there's a rare
+        `bug in isort <https://github.com/timothycrosley/isort/issues/460>`_ that might
+        require to run ``ff /path/to/repo/root`` twice.
+
+   Commit:
+
+    .. code-block:: sh
+
+        $ git commit -anm "Apply fix-format on all files" --author="Dev <dev@esss.com.br>"
+
+
+4. Execute ``codegen`` and check if no files were modified:
+
+    .. code-block:: sh
+
+        $ ff /path/to/repo/root --check
+
+5. Push and run your branch on CI.
+
+6. If all goes well, finally make ``codegen`` install the hook automatically in your ``tasks.py``:
+
+    .. code-block:: python
+
+        @ctask
+        def _codegen(ctx, cache='none', flags=''):
+            ns.tasks['constants'](ctx)
+            ns.tasks['hooks'](ctx)
+
+
+7. Profit!
+
+
 Credits
----------
+-------
 
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
 
