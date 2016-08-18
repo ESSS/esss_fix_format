@@ -51,7 +51,11 @@ def main(files_or_directories, check, stdin, commit):
                     errors.append(error_msg)
                     continue
             if extension == '.py':
-                new_contents = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG).output
+                sorter = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG)
+                # strangely, if the entire file is skipped by an "isort:skip_file"
+                # instruction in the docstring, SortImports doesn't even contain a
+                # "output" attribute
+                new_contents = sorter.output if hasattr(sorter, 'output') else old_contents
             else:
                 new_contents = old_contents
             new_contents = fix_whitespace(new_contents)

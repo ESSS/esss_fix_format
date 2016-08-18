@@ -2,6 +2,13 @@
 History
 =======
 
+
+1.1.2
+-----
+
+* Fixed error when an entire file was skipped due to a "isort:skip_file"
+  instruction on the docstring.
+
 1.1.1
 -----
 

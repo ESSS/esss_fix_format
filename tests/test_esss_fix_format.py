@@ -160,6 +160,21 @@ def test_empty_file(tmpdir):
     run([str(filename)], expected_exit=0)
 
 
+def test_skip_entire_file(tmpdir):
+    """Check that a module-level isort:skip_file correctly skips that file"""
+    source = textwrap.dedent('''\
+        """
+        isort:skip_file
+        """
+        import sys
+    ''')
+    filename = tmpdir.join('test.py')
+    filename.write(source)
+    output = run([str(filename)], expected_exit=0)
+    output.fnmatch_lines(str(filename) + ': Skipped')
+    assert filename.read() == source
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
