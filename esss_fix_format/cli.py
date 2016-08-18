@@ -17,9 +17,12 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 @click.command()
 @click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True,
                                                                   dir_okay=True, writable=True))
-@click.option('-k', '--check', default=False, is_flag=True, help='check if files are correctly formatted')
-@click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
-@click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
+@click.option('-k', '--check', default=False, is_flag=True,
+              help='check if files are correctly formatted')
+@click.option('--stdin', default=False, is_flag=True,
+              help='read filenames from stdin (1 per line)')
+@click.option('-c', '--commit', default=False, is_flag=True,
+              help='use modified files from git')
 def main(files_or_directories, check, stdin, commit):
     """Fixes and checks formatting according to ESSS standards."""
     import isort
@@ -77,7 +80,7 @@ def main(files_or_directories, check, stdin, commit):
 
     def banner(caption):
         caption = ' %s ' % caption
-        fill = (100 - len(caption))  // 2
+        fill = (100 - len(caption)) // 2
         h = '=' * fill
         return h + caption + h
 

@@ -228,4 +228,3 @@ def check_invalid_file(input_file):
     output.fnmatch_lines(str(input_file) + ': Failed')
     output.fnmatch_lines('*== failed checks ==*')
     output.fnmatch_lines(str(input_file))
-
