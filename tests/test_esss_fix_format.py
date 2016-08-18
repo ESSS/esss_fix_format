@@ -202,3 +202,6 @@ def fix_invalid_file(input_file):
 def check_invalid_file(input_file):
     output = run(['--check', str(input_file)], expected_exit=1)
     output.fnmatch_lines(str(input_file) + ': Failed')
+    output.fnmatch_lines('*== failed checks ==*')
+    output.fnmatch_lines(str(input_file))
+

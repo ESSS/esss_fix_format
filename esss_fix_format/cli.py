@@ -36,7 +36,7 @@ def main(files_or_directories, check, stdin, commit):
                                  if os.path.splitext(n)[1] in EXTENSIONS)
             else:
                 files.append(file_or_dir)
-    changed_files = 0
+    changed_files = []
     errors = []
     for filename in files:
         extension = os.path.splitext(filename)[1]
@@ -67,18 +67,28 @@ def main(files_or_directories, check, stdin, commit):
             with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
                 f.write(new_contents)
 
-        changed_files += int(changed)
+        if changed:
+            changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
         click.secho(click.format_filename(filename) + ': ' + status, fg=color)
 
+    def banner(caption):
+        caption = ' %s ' % caption
+        fill = (100 - len(caption))  // 2
+        h = '=' * fill
+        return h + caption + h
+
     if errors:
         click.secho('')
-        h = '=' * 30
-        click.secho(h + ' ERRORS ' + h, fg='red')
+        click.secho(banner('ERRORS'), fg='red')
         for error_msg in errors:
             click.secho(error_msg, fg='red')
         sys.exit(1)
     if check and changed_files:
+        click.secho('')
+        click.secho(banner('failed checks'), fg='yellow')
+        for filename in changed_files:
+            click.secho(filename, fg='yellow')
         sys.exit(1)
 
 
