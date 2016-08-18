@@ -175,6 +175,30 @@ def test_skip_entire_file(tmpdir):
     assert filename.read() == source
 
 
+@pytest.mark.xfail(reason='isort 4.2.5 bug, see timothycrosley/isort#460', strict=True)
+def test_isort_bug_with_comment_headers(tmpdir):
+    source = textwrap.dedent("""\
+        '''
+        See README.md for usage.
+        '''
+        import os
+
+        #===============================
+        # Ask
+        #===============================
+        import io
+
+
+        def Ask(question, answers):
+            pass
+    """)
+    filename = tmpdir.join('test.py')
+    filename.write(source)
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
+    check_valid_file(filename)
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
