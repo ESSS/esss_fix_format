@@ -17,7 +17,7 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 @click.command()
 @click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True,
                                                                   dir_okay=True, writable=True))
-@click.option('--check', default=False, is_flag=True, help='check if files are correctly formatted')
+@click.option('-k', '--check', default=False, is_flag=True, help='check if files are correctly formatted')
 @click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
 @click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
 def main(files_or_directories, check, stdin, commit):
@@ -40,29 +40,32 @@ def main(files_or_directories, check, stdin, commit):
     errors = []
     for filename in files:
         extension = os.path.splitext(filename)[1]
-        if extension in EXTENSIONS:
-            with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
-                try:
-                    old_contents = f.read()
-                except UnicodeDecodeError as e:
-                    msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
-                    error_msg = click.format_filename(filename) + msg
-                    click.secho(error_msg, fg='red')
-                    errors.append(error_msg)
-                    continue
-            if extension == '.py':
-                sorter = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG)
-                # strangely, if the entire file is skipped by an "isort:skip_file"
-                # instruction in the docstring, SortImports doesn't even contain a
-                # "output" attribute
-                new_contents = sorter.output if hasattr(sorter, 'output') else old_contents
-            else:
-                new_contents = old_contents
-            new_contents = fix_whitespace(new_contents)
-            changed = new_contents != old_contents
-        else:
+        if extension not in EXTENSIONS:
             click.secho(click.format_filename(filename) + ': Unknown extension', fg='white')
             continue
+
+        with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
+            try:
+                original_contents = f.read()
+            except UnicodeDecodeError as e:
+                msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+                error_msg = click.format_filename(filename) + msg
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
+                continue
+
+        new_contents = original_contents
+        if extension == '.py':
+            sorter = isort.SortImports(file_contents=new_contents, **ISORT_CONFIG)
+            # strangely, if the entire file is skipped by an "isort:skip_file"
+            # instruction in the docstring, SortImports doesn't even contain an
+            # "output" attribute
+            if hasattr(sorter, 'output'):
+                new_contents = sorter.output
+
+        new_contents = fix_whitespace(new_contents)
+        changed = new_contents != original_contents
+
         if not check and changed:
             with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
                 f.write(new_contents)
