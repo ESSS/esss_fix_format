@@ -2,6 +2,17 @@
 History
 =======
 
+
+1.2.0
+-----
+
+* Add "-k" shortcut for "--check".
+
+* Display a summary of files which skipped checks.
+
+* Fixed error when an entire file was skipped due to a "isort:skip_file"
+  instruction on the docstring.
+
 1.1.1
 -----
 

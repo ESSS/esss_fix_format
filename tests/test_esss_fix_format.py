@@ -160,6 +160,45 @@ def test_empty_file(tmpdir):
     run([str(filename)], expected_exit=0)
 
 
+def test_skip_entire_file(tmpdir):
+    """Check that a module-level isort:skip_file correctly skips that file"""
+    source = textwrap.dedent('''\
+        """
+        isort:skip_file
+        """
+        import sys
+    ''')
+    filename = tmpdir.join('test.py')
+    filename.write(source)
+    output = run([str(filename)], expected_exit=0)
+    output.fnmatch_lines(str(filename) + ': Skipped')
+    assert filename.read() == source
+
+
+@pytest.mark.xfail(reason='isort 4.2.5 bug, see timothycrosley/isort#460', strict=True)
+def test_isort_bug_with_comment_headers(tmpdir):
+    source = textwrap.dedent("""\
+        '''
+        See README.md for usage.
+        '''
+        import os
+
+        #===============================
+        # Ask
+        #===============================
+        import io
+
+
+        def Ask(question, answers):
+            pass
+    """)
+    filename = tmpdir.join('test.py')
+    filename.write(source)
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
+    check_valid_file(filename)
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
@@ -187,3 +226,5 @@ def fix_invalid_file(input_file):
 def check_invalid_file(input_file):
     output = run(['--check', str(input_file)], expected_exit=1)
     output.fnmatch_lines(str(input_file) + ': Failed')
+    output.fnmatch_lines('*== failed checks ==*')
+    output.fnmatch_lines(str(input_file))

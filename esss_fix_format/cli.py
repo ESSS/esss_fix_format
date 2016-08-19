@@ -17,9 +17,12 @@ EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
 @click.command()
 @click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True,
                                                                   dir_okay=True, writable=True))
-@click.option('--check', default=False, is_flag=True, help='check if files are correctly formatted')
-@click.option('--stdin', default=False, is_flag=True, help='read filenames from stdin (1 per line)')
-@click.option('-c', '--commit', default=False, is_flag=True, help='use modified files from git')
+@click.option('-k', '--check', default=False, is_flag=True,
+              help='check if files are correctly formatted')
+@click.option('--stdin', default=False, is_flag=True,
+              help='read filenames from stdin (1 per line)')
+@click.option('-c', '--commit', default=False, is_flag=True,
+              help='use modified files from git')
 def main(files_or_directories, check, stdin, commit):
     """Fixes and checks formatting according to ESSS standards."""
     import isort
@@ -36,45 +39,62 @@ def main(files_or_directories, check, stdin, commit):
                                  if os.path.splitext(n)[1] in EXTENSIONS)
             else:
                 files.append(file_or_dir)
-    changed_files = 0
+    changed_files = []
     errors = []
     for filename in files:
         extension = os.path.splitext(filename)[1]
-        if extension in EXTENSIONS:
-            with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
-                try:
-                    old_contents = f.read()
-                except UnicodeDecodeError as e:
-                    msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
-                    error_msg = click.format_filename(filename) + msg
-                    click.secho(error_msg, fg='red')
-                    errors.append(error_msg)
-                    continue
-            if extension == '.py':
-                new_contents = isort.SortImports(file_contents=old_contents, **ISORT_CONFIG).output
-            else:
-                new_contents = old_contents
-            new_contents = fix_whitespace(new_contents)
-            changed = new_contents != old_contents
-        else:
+        if extension not in EXTENSIONS:
             click.secho(click.format_filename(filename) + ': Unknown extension', fg='white')
             continue
+
+        with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
+            try:
+                original_contents = f.read()
+            except UnicodeDecodeError as e:
+                msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+                error_msg = click.format_filename(filename) + msg
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
+                continue
+
+        new_contents = original_contents
+        if extension == '.py':
+            sorter = isort.SortImports(file_contents=new_contents, **ISORT_CONFIG)
+            # strangely, if the entire file is skipped by an "isort:skip_file"
+            # instruction in the docstring, SortImports doesn't even contain an
+            # "output" attribute
+            if hasattr(sorter, 'output'):
+                new_contents = sorter.output
+
+        new_contents = fix_whitespace(new_contents)
+        changed = new_contents != original_contents
+
         if not check and changed:
             with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
                 f.write(new_contents)
 
-        changed_files += int(changed)
+        if changed:
+            changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
         click.secho(click.format_filename(filename) + ': ' + status, fg=color)
 
+    def banner(caption):
+        caption = ' %s ' % caption
+        fill = (100 - len(caption)) // 2
+        h = '=' * fill
+        return h + caption + h
+
     if errors:
         click.secho('')
-        h = '=' * 30
-        click.secho(h + ' ERRORS ' + h, fg='red')
+        click.secho(banner('ERRORS'), fg='red')
         for error_msg in errors:
             click.secho(error_msg, fg='red')
         sys.exit(1)
     if check and changed_files:
+        click.secho('')
+        click.secho(banner('failed checks'), fg='yellow')
+        for filename in changed_files:
+            click.secho(filename, fg='yellow')
         sys.exit(1)
 
 
