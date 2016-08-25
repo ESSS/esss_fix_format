@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import io
 import os
 import subprocess
 import textwrap
@@ -14,17 +15,21 @@ from esss_fix_format import cli
 
 @pytest.fixture
 def input_file(tmpdir):
+    # imports out-of-order included in example so isort detects as necessary to change
     source = textwrap.dedent(
-        r'''\
+        '''\
+            import sys
+            import os
+
             alpha
-            bravo\s\t\s
+            bravo\\s\\t\\s
             charlie
-            \tdelta
+            \\tdelta
             echo
             foxtrot
             golf #Comment
             hotel
-        '''.replace('\s', ' ').replace(r'\t', '\t').replace(r'\r', '\r').replace(r'\n', '\n')
+        '''.replace('\\s', ' ').replace('\\t', '\t')
     )
     filename = tmpdir.join('test.py')
     filename.write(source)
@@ -39,13 +44,28 @@ def test_command_line_interface(input_file):
     fix_valid_file(input_file)
 
 
-@pytest.mark.parametrize('eol', [b'\n', b'\r\n', b'\r'])
+@pytest.mark.parametrize(
+    'eol',
+    [
+        '\n',
+        '\r\n',
+        '\r'
+    ],
+    ids=[
+        'lf',
+        'crlf',
+        'cr'
+    ]
+)
 def test_input_eol_preserved(input_file, eol):
-    contents = input_file.read('rb')
-    contents = contents.replace(b'\n', eol)
-    input_file.write(contents, 'wb')
+    contents = input_file.read('r')
+    contents = contents.replace('\n', eol)
+    input_file.write(contents.encode('ascii'), 'wb')
     check_invalid_file(input_file)
     fix_invalid_file(input_file)
+
+    for line in io.open(str(input_file), newline='').readlines():
+        assert line.endswith(eol)
 
 
 def test_directory_command_line(input_file, tmpdir):
@@ -65,20 +85,22 @@ def test_stdin_input(input_file):
     assert str(input_file) in result.output
 
 
-def test_fix_format(input_file):
-    input_contents = input_file.read()
-    obtained = cli.fix_whitespace(str(input_contents))
+def test_fix_whitespace(input_file):
+    obtained = cli.fix_whitespace(input_file.readlines(), eol='\n', ends_with_eol=True)
     expected = textwrap.dedent(
-        r'''\
+        '''\
+            import sys
+            import os
+
             alpha
             bravo
             charlie
-            \s\s\s\sdelta
+            \\s\\s\\s\\sdelta
             echo
             foxtrot
             golf #Comment
             hotel
-        '''.replace(r'\s', ' ')
+        '''.replace('\\s', ' ')
     )
     assert obtained == expected
 
