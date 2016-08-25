@@ -49,6 +49,14 @@ def main(files_or_directories, check, stdin, commit):
 
         with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
             try:
+                # There is an issue with isort (https://github.com/timothycrosley/isort/issues/350,
+                # even though closed it is not fixed!) that changes EOL to \n when there is a import
+                # reorder.
+                #
+                # So to be safe, it is necessary to peek first line to detect EOL BEFORE any
+                # processing happens.
+                first_line = f.readline()
+                f.seek(0)
                 original_contents = f.read()
             except UnicodeDecodeError as e:
                 msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
@@ -58,6 +66,10 @@ def main(files_or_directories, check, stdin, commit):
                 continue
 
         new_contents = original_contents
+
+        eol = _peek_eol(first_line)
+        ends_with_eol = new_contents.endswith(eol)
+
         if extension == '.py':
             sorter = isort.SortImports(file_contents=new_contents, **ISORT_CONFIG)
             # strangely, if the entire file is skipped by an "isort:skip_file"
@@ -66,7 +78,7 @@ def main(files_or_directories, check, stdin, commit):
             if hasattr(sorter, 'output'):
                 new_contents = sorter.output
 
-        new_contents = fix_whitespace(new_contents)
+        new_contents = fix_whitespace(new_contents.splitlines(True), eol, ends_with_eol)
         changed = new_contents != original_contents
 
         if not check and changed:
@@ -115,17 +127,22 @@ def _get_status_and_color(check, changed):
             return 'Skipped', 'yellow'
 
 
-def fix_whitespace(old_contents):
+def fix_whitespace(lines, eol, ends_with_eol):
     """
     Fix whitespace issues in the given list of lines.
 
-    :param unicode old_contents:
+    :param list[unicode] lines:
         List of lines to fix spaces and indentations.
+    :param unicode eol:
+        EOL of file.
+    :param bool ends_with_eol:
+        If file ends with EOL.
 
-    :return unicode:
+    :rtype: unicode
+    :return:
         Returns the new contents.
     """
-    lines, eol, ends_with_eol = _split_lines_and_original_eol(old_contents)
+    lines = _strip(lines)
     lines = [i.expandtabs(4) for i in lines]
     result = eol.join(lines)
     if ends_with_eol:
@@ -133,7 +150,7 @@ def fix_whitespace(old_contents):
     return result
 
 
-def _split_lines_and_original_eol(contents):
+def _strip(lines):
     """
     Splits the given text, removing the original eol but returning the eol
     so it can be written again on disk using the original eol.
@@ -143,16 +160,23 @@ def _split_lines_and_original_eol(contents):
         strings, `eol` the string to be used as newline and `ends_with_eol`
         a boolean which indicates if the last line ends with a new line or not.
     """
-    lines = contents.splitlines(True)
-    eol = u'\n'
-    if lines:
-        if lines[0].endswith(u'\r'):
-            eol = u'\r'
-        elif lines[0].endswith(u'\r\n'):
-            eol = u'\r\n'
-    ends_with_eol = contents.endswith(eol)
     lines = [i.rstrip() for i in lines]
-    return lines, eol, ends_with_eol
+    return lines
+
+
+def _peek_eol(line):
+    """
+    :param unicode line: A line in file.
+    :rtype: unicode
+    :return: EOL used by line.
+    """
+    eol = u'\n'
+    if line:
+        if line.endswith(u'\r'):
+            eol = u'\r'
+        elif line.endswith(u'\r\n'):
+            eol = u'\r\n'
+    return eol
 
 
 def get_files_from_git():

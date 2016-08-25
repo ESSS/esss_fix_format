@@ -2,6 +2,11 @@
 History
 =======
 
+1.2.1
+-----
+
+* Fixed bug where EOL wasn't preserved in files affected by isort.
+
 
 1.2.0
 -----
