@@ -6,9 +6,36 @@ import sys
 import click
 import subprocess
 
+
+# This is a complete list of all modules in our stdlib which are not already known to isort
+# This is a workaround for https://github.com/timothycrosley/isort/issues/464
+all_stdlib_modules = ["Bastion", "CGIHTTPServer", "DocXMLRPCServer", "HTMLParser", "MimeWriter",
+                      "SimpleHTTPServer", "UserDict", "UserList", "UserString", "aifc",
+                      "antigravity", "ast",
+                      "audiodev", "bdb", "binhex", "cgi", "chunk", "code", "codeop", "colorsys",
+                      "cookielib", "copy_reg",
+                      "dummy_thread", "dummy_threading", "formatter", "fpformat", "ftplib",
+                      "genericpath",
+                      "htmlentitydefs", "htmllib", "httplib", "ihooks", "imghdr", "imputil",
+                      "keyword", "macpath", "macurl2path",
+                      "mailcap", "markupbase", "md5", "mimetools", "mimetypes", "mimify",
+                      "modulefinder", "multifile", "mutex",
+                      "netrc", "new", "nntplib", "ntpath", "nturl2path", "numbers", "opcode",
+                      "os2emxpath", "pickletools", "popen2", "poplib", "posixfile", "posixpath",
+                      "pty",
+                      "py_compile", "quopri", "repr", "rexec", "rfc822", "runpy", "sets", "sgmllib",
+                      "sha", "sndhdr", "sre",
+                      "sre_compile", "sre_constants", "sre_parse", "ssl", "stat", "statvfs",
+                      "stringold",
+                      "stringprep", "sunau", "sunaudio", "symbol", "symtable", "telnetlib", "this",
+                      "toaiff", "token",
+                      "tokenize", "tty", "types", "user", "uu", "wave", "xdrlib", "xmllib"]
+
 ISORT_CONFIG = {
     'line_length': 100,
     'multi_line_output': 4,  # 4-vert-grid
+    # This is a workaround for https://github.com/timothycrosley/isort/issues/464
+    'known_standard_library': all_stdlib_modules,
 }
 
 EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
