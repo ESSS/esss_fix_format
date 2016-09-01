@@ -56,11 +56,20 @@ Migrating a project to use fix-format
 
 Follow this steps to re format an entire project and start using the pre-commit hook:
 
-1. Execute from your conda **root environment**:
+1. You should have ``ff`` available in your environment already:
 
     .. code-block:: sh
 
-        conda install esss_fix_format
+        $ ff --help
+        Usage: ff-script.py [OPTIONS] [FILES_OR_DIRECTORIES]...
+
+          Fixes and checks formatting according to ESSS standards.
+
+        Options:
+          -k, --check   check if files are correctly formatted
+          --stdin       read filenames from stdin (1 per line)
+          -c, --commit  use modified files from git
+          --help        Show this message and exit.
 
 
 2. Search for all usages of ``coilib50.LoadCppModule`` function, and for each file that
