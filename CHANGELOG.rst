@@ -2,6 +2,13 @@
 History
 =======
 
+
+1.2.2
+-----
+
+* Workaround for isort bug where some stdlib modules are not recognized as such because of a
+  non-standard Python location.
+
 1.2.1
 -----
 

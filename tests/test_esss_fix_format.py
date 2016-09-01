@@ -221,6 +221,28 @@ def test_isort_bug_with_comment_headers(tmpdir):
     check_valid_file(filename)
 
 
+def test_missing_builtins(tmpdir):
+    source = textwrap.dedent("""\
+        import thirdparty
+        import os
+        import ftplib
+        import numbers
+    """)
+    filename = tmpdir.join('test.py')
+    filename.write(source)
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
+    check_valid_file(filename)
+    obtained = filename.read()
+    assert obtained == textwrap.dedent("""\
+        import ftplib
+        import numbers
+        import os
+
+        import thirdparty
+    """)
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
