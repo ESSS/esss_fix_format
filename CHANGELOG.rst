@@ -3,6 +3,11 @@ History
 =======
 
 
+1.2.3
+-----
+
+* Force to always use parentheses on multi-line imports.
+
 1.2.2
 -----
 

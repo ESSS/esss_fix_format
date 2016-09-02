@@ -34,6 +34,7 @@ all_stdlib_modules = ["Bastion", "CGIHTTPServer", "DocXMLRPCServer", "HTMLParser
 ISORT_CONFIG = {
     'line_length': 100,
     'multi_line_output': 4,  # 4-vert-grid
+    'use_parentheses': True,
     # This is a workaround for https://github.com/timothycrosley/isort/issues/464
     'known_standard_library': all_stdlib_modules,
 }
