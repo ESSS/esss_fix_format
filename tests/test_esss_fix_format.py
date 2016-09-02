@@ -243,6 +243,24 @@ def test_missing_builtins(tmpdir):
     """)
 
 
+def test_force_parentheses(tmpdir):
+    source = (
+        'from shutil import copyfileobj, copyfile, copymode, copystat,\\\n'
+        '    copymode, ignore_patterns, copytree, rmtree, move'
+    )
+    filename = tmpdir.join('test.py')
+    filename.write(source)
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
+    check_valid_file(filename)
+    obtained = filename.read()
+    expected = (
+        'from shutil import (\n'
+        '    copyfile, copyfileobj, copymode, copystat, copytree, ignore_patterns, move, rmtree)'
+    )
+    assert obtained == expected
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
