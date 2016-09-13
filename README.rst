@@ -72,14 +72,12 @@ Follow this steps to re format an entire project and start using the pre-commit 
           --help        Show this message and exit.
 
 
-2. Search for all usages of ``coilib50.LoadCppModule`` function, and for each file that
+2. Search for all usages of ``LoadCppModule`` function (from ``coilib50``), and for each file that
    uses it add ``isort:skipfile`` to the docstring:
 
     .. code-block:: python
 
         """
-        module docstring contents..*:
-
         isort:skip_file
         """
 
@@ -97,13 +95,14 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
     .. code-block:: sh
 
-        $ ff /path/to/repo/root
+        $ cd /path/to/repo/root
+        $ ff .
 
    After it completes, make sure there are no problems with the files:
 
     .. code-block:: sh
 
-        $ ff /path/to/repo/root --check
+        $ ff . --check
 
    .. note::
         if the check fails, try running it again; there's a rare
