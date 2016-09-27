@@ -17,12 +17,14 @@ Simple code formatter and pre-commit checker used internally by ESSS.
 Install
 -------
 
-Execute from your conda **root environment**:
+Execute from your project's conda environment:
 
 .. code-block:: sh
 
     conda install esss_fix_format
-    
+
+If executed from the root environment (or another environment) isort could classify wrongly some modules.
+
 To obtain coloring support, you may also install ``colorama``:    
 
 .. code-block:: sh
