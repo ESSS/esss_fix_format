@@ -17,7 +17,9 @@ Simple code formatter and pre-commit checker used internally by ESSS.
 Install
 -------
 
-Execute from your project's conda environment:
+``esss_fix_format`` is installed automatically by the ``ben10`` environment file.
+
+If you want to install it manually, execute from your project's conda environment:
 
 .. code-block:: sh
 
