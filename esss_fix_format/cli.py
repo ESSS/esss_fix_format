@@ -220,8 +220,8 @@ def get_files_from_git():
     result.update(get_files('git ls-files -o --full-name --exclude-standard'))
     # check_output returns bytes in Python 3
     if sys.version_info[0] > 2:
-        result = [x.decode(sys.getfilesystemencoding()) for x in result]
-        root = root.decode(sys.getfilesystemencoding())
+        result = [os.fsdecode(x) for x in result]
+        root = os.fsdecode(root)
     return sorted(os.path.join(root, x) for x in result)
 
 

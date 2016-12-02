@@ -155,7 +155,7 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
         else:
             result = input_file.basename + '\n'
         if sys.version_info[0] > 2:
-            result = result.encode(sys.getfilesystemencoding())
+            result = os.fsencode(result)
         return result
 
     m = mocker.patch.object(subprocess, 'check_output', side_effect=check_output)
