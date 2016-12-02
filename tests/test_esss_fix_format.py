@@ -154,7 +154,7 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
             result = str(tmpdir) + '\n'
         else:
             result = input_file.basename + '\n'
-        if sys.version_info[0] == 3:
+        if sys.version_info[0] > 2:
             result = result.encode(sys.getfilesystemencoding())
         return result
 
