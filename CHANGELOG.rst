@@ -3,6 +3,11 @@ History
 =======
 
 
+1.2.4
+-----
+
+* Fix `ff -c`/`ff --commit` in Python 3.
+
 1.2.3
 -----
 

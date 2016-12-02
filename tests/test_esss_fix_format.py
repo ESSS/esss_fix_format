@@ -3,6 +3,7 @@
 import io
 import os
 import subprocess
+import sys
 import textwrap
 
 import mock
@@ -150,9 +151,12 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
 
     def check_output(cmd, *args, **kwargs):
         if '--show-toplevel' in cmd:
-            return str(tmpdir) + '\n'
+            result = str(tmpdir) + '\n'
         else:
-            return input_file.basename + '\n'
+            result = input_file.basename + '\n'
+        if sys.version_info[0] > 2:
+            result = os.fsencode(result)
+        return result
 
     m = mocker.patch.object(subprocess, 'check_output', side_effect=check_output)
     output = run([param], expected_exit=0)

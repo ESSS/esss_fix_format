@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import io
 import os
+import subprocess
 import sys
 
 import click
-import subprocess
 
 
 # This is a complete list of all modules in our stdlib which are not already known to isort
@@ -218,6 +218,10 @@ def get_files_from_git():
     result.update(get_files('git diff --name-only --diff-filter=ACM --staged'))
     result.update(get_files('git diff --name-only --diff-filter=ACM'))
     result.update(get_files('git ls-files -o --full-name --exclude-standard'))
+    # check_output returns bytes in Python 3
+    if sys.version_info[0] > 2:
+        result = [os.fsdecode(x) for x in result]
+        root = os.fsdecode(root)
     return sorted(os.path.join(root, x) for x in result)
 
 
