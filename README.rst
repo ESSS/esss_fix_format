@@ -139,5 +139,19 @@ Follow this steps to re format an entire project and start using the pre-commit 
 8. Profit!
 
 
+Developing (conda)
+------------------
+
+Create a conda environent (using Python 3 here) and install it in development mode:
+
+.. code-block:: sh
+
+    $ conda create -n esss-fix-format-py3 python=3
+    $ source activate esss-fix-format-py3
+    $ pip install -e .
+    $ pip install . -r requirements_dev.txt
+    $ pytest
+
+When implementing changes, please do it in a separate branch and open a PR.
 
 Licensed under the MIT license.
