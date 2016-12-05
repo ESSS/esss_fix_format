@@ -17,7 +17,9 @@ Simple code formatter and pre-commit checker used internally by ESSS.
 Install
 -------
 
-Execute from your project's conda environment:
+``esss_fix_format`` is installed automatically by the ``ben10`` environment file.
+
+If you want to install it manually, execute from your project's conda environment:
 
 .. code-block:: sh
 
@@ -139,5 +141,19 @@ Follow this steps to re format an entire project and start using the pre-commit 
 8. Profit!
 
 
+Developing (conda)
+------------------
+
+Create a conda environent (using Python 3 here) and install it in development mode:
+
+.. code-block:: sh
+
+    $ conda create -n esss-fix-format-py3 python=3
+    $ source activate esss-fix-format-py3
+    $ pip install -e .
+    $ pip install . -r requirements_dev.txt
+    $ pytest
+
+When implementing changes, please do it in a separate branch and open a PR.
 
 Licensed under the MIT license.
