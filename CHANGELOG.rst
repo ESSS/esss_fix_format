@@ -3,6 +3,11 @@ History
 =======
 
 
+1.3.0
+-----
+
+* Add support for Cython files (`*.pyx`, `*.pxd`).
+
 1.2.4
 -----
 
