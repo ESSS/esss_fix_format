@@ -39,7 +39,7 @@ ISORT_CONFIG = {
     'known_standard_library': all_stdlib_modules,
 }
 
-EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js'}
+EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js', '.pyx', '.pxd'}
 
 
 @click.command()
