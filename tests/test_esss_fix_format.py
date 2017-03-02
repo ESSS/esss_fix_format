@@ -146,6 +146,13 @@ def test_unknown_extension(input_file):
     output.fnmatch_lines(str(new_filename) + ': Unknown file type')
 
 
+def test_filename_without_wildcard(tmpdir):
+    filename = tmpdir.join('CMakeLists.txt')
+    filename.write('\t#\n')
+    output = run([str(filename)], expected_exit=0)
+    output.fnmatch_lines(str(filename) + ': Fixed')
+
+
 @pytest.mark.parametrize('param', ['-c', '--commit'])
 def test_fix_commit(input_file, mocker, param, tmpdir):
 

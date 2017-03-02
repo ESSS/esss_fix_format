@@ -3,6 +3,11 @@ History
 =======
 
 
+1.4.1
+-----
+
+* Fix support for filenames in pattern (such as `CMakeLists.txt`), when in subdirectories.
+
 1.4.0
 -----
 
