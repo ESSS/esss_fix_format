@@ -39,7 +39,27 @@ ISORT_CONFIG = {
     'known_standard_library': all_stdlib_modules,
 }
 
-EXTENSIONS = {'.py', '.cpp', '.c', '.h', '.hpp', '.hxx', '.cxx', '.java', '.js', '.pyx', '.pxd'}
+PATTERNS = {
+    '*.py',
+    '*.cpp',
+    '*.c',
+    '*.h',
+    '*.hpp',
+    '*.hxx',
+    '*.cxx',
+    '*.java',
+    '*.js',
+    '*.pyx',
+    '*.pxd',
+    'CMakeLists.txt',
+    '*.cmake',
+}
+
+
+def should_format(filename):
+    """Return True if the filename is of a type that is supported by this tool."""
+    from fnmatch import fnmatch
+    return any(fnmatch(filename, p) for p in PATTERNS)
 
 
 @click.command()
@@ -63,16 +83,14 @@ def main(files_or_directories, check, stdin, commit):
         for file_or_dir in files_or_directories:
             if os.path.isdir(file_or_dir):
                 for root, dirs, names in os.walk(file_or_dir):
-                    files.extend(os.path.join(root, n) for n in names
-                                 if os.path.splitext(n)[1] in EXTENSIONS)
+                    files.extend(os.path.join(root, n) for n in names if should_format(n))
             else:
                 files.append(file_or_dir)
     changed_files = []
     errors = []
     for filename in files:
-        extension = os.path.splitext(filename)[1]
-        if extension not in EXTENSIONS:
-            click.secho(click.format_filename(filename) + ': Unknown extension', fg='white')
+        if not should_format(filename):
+            click.secho(click.format_filename(filename) + ': Unknown file type', fg='white')
             continue
 
         with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
@@ -97,6 +115,7 @@ def main(files_or_directories, check, stdin, commit):
 
         eol = _peek_eol(first_line)
         ends_with_eol = new_contents.endswith(eol)
+        extension = os.path.normcase(os.path.splitext(filename)[1])
 
         if extension == '.py':
             sorter = isort.SortImports(file_contents=new_contents, **ISORT_CONFIG)

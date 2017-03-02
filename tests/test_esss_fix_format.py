@@ -140,10 +140,10 @@ def test_unknown_extension(input_file):
     new_filename = py.path.local(os.path.splitext(str(input_file))[0] + '.unknown')
     input_file.move(new_filename)
     output = run(['--check', str(new_filename)], expected_exit=0)
-    output.fnmatch_lines(str(new_filename) + ': Unknown extension')
+    output.fnmatch_lines(str(new_filename) + ': Unknown file type')
 
     output = run([str(new_filename)], expected_exit=0)
-    output.fnmatch_lines(str(new_filename) + ': Unknown extension')
+    output.fnmatch_lines(str(new_filename) + ': Unknown file type')
 
 
 @pytest.mark.parametrize('param', ['-c', '--commit'])
