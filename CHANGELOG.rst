@@ -3,6 +3,11 @@ History
 =======
 
 
+1.4.0
+-----
+
+* Add support for CMake files (`*.cmake`, `CMakeLists.txt`).
+
 1.3.0
 -----
 
