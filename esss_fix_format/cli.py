@@ -59,7 +59,7 @@ PATTERNS = {
 def should_format(filename):
     """Return True if the filename is of a type that is supported by this tool."""
     from fnmatch import fnmatch
-    return any(fnmatch(filename, p) for p in PATTERNS)
+    return any(fnmatch(os.path.split(filename)[-1], p) for p in PATTERNS)
 
 
 @click.command()
