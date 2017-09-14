@@ -37,7 +37,7 @@ ISORT_CONFIG = {
     'use_parentheses': True,
     # This is a workaround for https://github.com/timothycrosley/isort/issues/464
     'known_standard_library': all_stdlib_modules,
-    'known_third_party': ["six", "six.moves"],
+    'known_third_party': ["six", "six.moves", "sip"],
 }
 
 PATTERNS = {
