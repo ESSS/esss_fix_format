@@ -13,7 +13,7 @@ all_stdlib_modules = ["Bastion", "CGIHTTPServer", "DocXMLRPCServer", "HTMLParser
                       "SimpleHTTPServer", "UserDict", "UserList", "UserString", "aifc",
                       "antigravity", "ast",
                       "audiodev", "bdb", "binhex", "cgi", "chunk", "code", "codeop", "colorsys",
-                      "cookielib", "copy_reg",
+                      "cookielib", "copy_reg", "email",
                       "dummy_thread", "dummy_threading", "formatter", "fpformat", "ftplib",
                       "genericpath",
                       "htmlentitydefs", "htmllib", "httplib", "ihooks", "imghdr", "imputil",
@@ -37,6 +37,7 @@ ISORT_CONFIG = {
     'use_parentheses': True,
     # This is a workaround for https://github.com/timothycrosley/isort/issues/464
     'known_standard_library': all_stdlib_modules,
+    'known_third_party': ["six", "six.moves", "sip"],
 }
 
 PATTERNS = {
