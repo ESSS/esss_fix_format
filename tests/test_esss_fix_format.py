@@ -208,7 +208,6 @@ def test_skip_entire_file(tmpdir):
     assert filename.read() == source
 
 
-@pytest.mark.xfail(reason='isort 4.2.5 bug, see timothycrosley/isort#460', strict=True)
 def test_isort_bug_with_comment_headers(tmpdir):
     source = textwrap.dedent("""\
         '''
