@@ -13,9 +13,16 @@ from click.testing import CliRunner
 
 from esss_fix_format import cli
 
+@pytest.fixture
+def sort_cfg_to_tmpdir(tmpdir):
+    import shutil
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), '..', '.isort.cfg'),
+        str(tmpdir.join('.isort.cfg')))
+
 
 @pytest.fixture
-def input_file(tmpdir):
+def input_file(tmpdir, sort_cfg_to_tmpdir):
     # imports out-of-order included in example so isort detects as necessary to change
     source = textwrap.dedent(
         '''\
@@ -34,6 +41,7 @@ def input_file(tmpdir):
     )
     filename = tmpdir.join('test.py')
     filename.write(source)
+
     return filename
 
 
@@ -106,7 +114,7 @@ def test_fix_whitespace(input_file):
     assert obtained == expected
 
 
-def test_imports(tmpdir):
+def test_imports(tmpdir, sort_cfg_to_tmpdir):
     source = textwrap.dedent('''\
         import pytest
         import sys
@@ -146,7 +154,7 @@ def test_unknown_extension(input_file):
     output.fnmatch_lines(str(new_filename) + ': Unknown file type')
 
 
-def test_filename_without_wildcard(tmpdir):
+def test_filename_without_wildcard(tmpdir, sort_cfg_to_tmpdir):
     filename = tmpdir.join('CMakeLists.txt')
     filename.write('\t#\n')
     output = run([str(filename)], expected_exit=0)
@@ -176,7 +184,7 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
     ]
 
 
-def test_input_invalid_codec(tmpdir):
+def test_input_invalid_codec(tmpdir, sort_cfg_to_tmpdir):
     """Display error summary when we fail to open a file"""
     filename = tmpdir.join('test.py')
     filename.write(u'hello world'.encode('UTF-16'), 'wb')
@@ -186,14 +194,14 @@ def test_input_invalid_codec(tmpdir):
     output.fnmatch_lines(str(filename) + ': ERROR (Unicode*')
 
 
-def test_empty_file(tmpdir):
+def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
     """Ensure files with a single empty line do not raise an error"""
     filename = tmpdir.join('test.py')
     filename.write(u'\r\n', 'w')
     run([str(filename)], expected_exit=0)
 
 
-def test_skip_entire_file(tmpdir):
+def test_skip_entire_file(tmpdir, sort_cfg_to_tmpdir):
     """Check that a module-level isort:skip_file correctly skips that file"""
     source = textwrap.dedent('''\
         """
@@ -208,7 +216,7 @@ def test_skip_entire_file(tmpdir):
     assert filename.read() == source
 
 
-def test_isort_bug_with_comment_headers(tmpdir):
+def test_isort_bug_with_comment_headers(tmpdir, sort_cfg_to_tmpdir):
     source = textwrap.dedent("""\
         '''
         See README.md for usage.
@@ -231,7 +239,7 @@ def test_isort_bug_with_comment_headers(tmpdir):
     check_valid_file(filename)
 
 
-def test_missing_builtins(tmpdir):
+def test_missing_builtins(tmpdir, sort_cfg_to_tmpdir):
     source = textwrap.dedent("""\
         import thirdparty
         import os
@@ -253,7 +261,7 @@ def test_missing_builtins(tmpdir):
     """)
 
 
-def test_force_parentheses(tmpdir):
+def test_force_parentheses(tmpdir, sort_cfg_to_tmpdir):
     source = (
         'from shutil import copyfileobj, copyfile, copymode, copystat,\\\n'
         '    copymode, ignore_patterns, copytree, rmtree, move'
@@ -269,6 +277,12 @@ def test_force_parentheses(tmpdir):
         '    copyfile, copyfileobj, copymode, copystat, copytree, ignore_patterns, move, rmtree)'
     )
     assert obtained == expected
+
+def test_no_isort_cfg(tmpdir):
+    filename = tmpdir.join('test.py')
+    filename.write('import os', 'w')
+    output = run([str(filename)], expected_exit=1)
+    output.fnmatch_lines(r'*ERROR .isort.cfg not available in repository (or line_length config < 80).')
 
 
 def run(args, expected_exit):
