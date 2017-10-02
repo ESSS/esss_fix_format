@@ -13,6 +13,7 @@ from click.testing import CliRunner
 
 from esss_fix_format import cli
 
+
 @pytest.fixture
 def sort_cfg_to_tmpdir(tmpdir):
     import shutil
@@ -278,11 +279,13 @@ def test_force_parentheses(tmpdir, sort_cfg_to_tmpdir):
     )
     assert obtained == expected
 
+
 def test_no_isort_cfg(tmpdir):
     filename = tmpdir.join('test.py')
     filename.write('import os', 'w')
     output = run([str(filename)], expected_exit=1)
-    output.fnmatch_lines(r'*ERROR .isort.cfg not available in repository (or line_length config < 80).')
+    output.fnmatch_lines(
+        r'*ERROR .isort.cfg not available in repository (or line_length config < 80).')
 
 
 def run(args, expected_exit):

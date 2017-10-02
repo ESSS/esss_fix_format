@@ -95,7 +95,6 @@ def main(files_or_directories, check, stdin, commit):
                 click.secho(error_msg, fg='red')
                 errors.append(error_msg)
 
-
             sorter = isort.SortImports(file_contents=new_contents, settings_path=settings_path)
             # strangely, if the entire file is skipped by an "isort:skip_file"
             # instruction in the docstring, SortImports doesn't even contain an
