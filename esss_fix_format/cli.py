@@ -96,11 +96,12 @@ def main(files_or_directories, check, stdin, commit):
                 errors.append(error_msg)
 
             sorter = isort.SortImports(file_contents=new_contents, settings_path=settings_path)
-            # strangely, if the entire file is skipped by an "isort:skip_file"
-            # instruction in the docstring, SortImports doesn't even contain an
-            # "output" attribute
-            if hasattr(sorter, 'output'):
-                new_contents = sorter.output
+            # On older versions if the entire file is skipped (eg.: by an "isort:skip_file")
+            # instruction in the docstring, SortImports doesn't even contain an "output" attribute.
+            # In some recent versions it is `None`.
+            new_contents = getattr(sorter, 'output', None)
+            if new_contents is None:
+                new_contents = original_contents
 
         new_contents = fix_whitespace(new_contents.splitlines(True), eol, ends_with_eol)
         changed = new_contents != original_contents
