@@ -202,14 +202,20 @@ def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
     run([str(filename)], expected_exit=0)
 
 
-def test_skip_entire_file(tmpdir, sort_cfg_to_tmpdir):
-    """Check that a module-level isort:skip_file correctly skips that file"""
-    source = textwrap.dedent('''\
-        """
-        isort:skip_file
-        """
-        import sys
-    ''')
+@pytest.mark.parametrize(
+    'source',
+    [
+        '',
+        '"""\nisort:skip_file\n"""\nimport sys\nimport os\n',
+        '# isort:skip_file\nimport sys\nimport os\n',
+    ],
+    ids=[
+        'empty file',
+        'module-level isort:skip_file docstring',
+        'module-level isort:skip_file comment',
+    ]
+)
+def test_skip_entire_file(tmpdir, sort_cfg_to_tmpdir, source):
     filename = tmpdir.join('test.py')
     filename.write(source)
     output = run([str(filename)], expected_exit=0)
