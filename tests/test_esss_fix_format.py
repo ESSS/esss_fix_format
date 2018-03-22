@@ -294,6 +294,38 @@ def test_no_isort_cfg(tmpdir):
         r'*ERROR .isort.cfg not available in repository (or line_length config < 80).')
 
 
+def test_isort_cfg_in_parent(tmpdir, monkeypatch):
+    """
+    This test checks that a configuration file is properly read from a parent directory.
+    This need to be checked because isort it self can fail to do this when passed a relative path.
+    """
+    # more than 81 character on the same line.
+    source = (
+        'from shutil import copyfileobj, copyfile, copymode, copystat, copymode, ignore_patterns,'
+        ' move, rmtree'
+    )
+    filename = tmpdir.ensure("subfolder", "test.py")
+    filename.write(source, 'w')
+
+    cfg_filename = tmpdir.ensure(".isort.cfg")
+    cfg_filename.write('[settings]\nline_length=81\nmulti_line_output=1\n', 'w')
+
+    monkeypatch.chdir(os.path.dirname(str(filename)))
+    output = run(['.'], expected_exit=0)
+    output.fnmatch_lines('*test.py: Fixed')
+    obtained = filename.read()
+    expected = '\n'.join([
+        'from shutil import (copyfile,',
+        '                    copyfileobj,',
+        '                    copymode,',
+        '                    copystat,',
+        '                    ignore_patterns,',
+        '                    move,',
+        '                    rmtree)',
+    ])
+    assert obtained == expected
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
