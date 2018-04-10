@@ -85,7 +85,7 @@ def main(files_or_directories, check, stdin, commit):
         extension = os.path.normcase(os.path.splitext(filename)[1])
 
         if extension == '.py':
-            settings_path = os.path.dirname(filename)
+            settings_path = os.path.abspath(os.path.dirname(filename))
             settings_loaded = isort.settings.from_path(settings_path)
             if settings_loaded['line_length'] < 80:
                 # The default isort configuration has 79 chars, so, if the passed
