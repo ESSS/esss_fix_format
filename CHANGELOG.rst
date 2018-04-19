@@ -3,6 +3,21 @@ History
 =======
 
 
+1.4.3
+-----
+
+* Use absolute paths when calling isort to properly load per project isort config files.
+
+1.4.2
+-----
+
+* Fix handling of isort skipped files.
+
+* Use default isort options, for custor formating a configuration file should be used as
+  described in `isort documentation`_.
+
+.. _`isort documentation`: https://github.com/timothycrosley/isort/wiki/isort-Settings
+
 1.4.1
 -----
 
