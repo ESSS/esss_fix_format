@@ -10,7 +10,7 @@ with open('CHANGELOG.rst') as changelog_file:
     changelog = changelog_file.read()
 
 requirements = [
-    'Click>=6.0',
+    'click>=6.0',
     'isort',
 ]
 
