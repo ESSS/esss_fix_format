@@ -12,6 +12,7 @@ with open('CHANGELOG.rst') as changelog_file:
 requirements = [
     'click>=6.0',
     'isort',
+    'pydevf==0.1.4',
 ]
 
 test_requirements = [
@@ -19,7 +20,7 @@ test_requirements = [
 
 setup(
     name='esss_fix_format',
-    version='1.4.3',
+    version='1.5.0',
     description="ESSS code formatter and checker",
     long_description=readme + '\n\n' + changelog,
     author="Bruno Oliveira",

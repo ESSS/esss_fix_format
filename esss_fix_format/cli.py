@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 import click
+import pydevf
 
 PATTERNS = {
     '*.py',
@@ -40,6 +41,24 @@ def should_format(filename):
               help='use modified files from git')
 def main(files_or_directories, check, stdin, commit):
     """Fixes and checks formatting according to ESSS standards."""
+
+    formatter = []
+
+    def format_code(code_to_format):
+        if not formatter:
+            # Start-up pydevf server on demand.
+            formatter.append(pydevf.start_format_server())
+        return pydevf.format_code_server(formatter[0], code_to_format)
+
+    try:
+        return _main(files_or_directories, check, stdin, commit, format_code)
+    finally:
+        if formatter:
+            # Stop pydevf if needed.
+            pydevf.stop_format_server(formatter[0])
+
+
+def _main(files_or_directories, check, stdin, commit, format_code):
     import isort.settings
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
@@ -102,6 +121,14 @@ def main(files_or_directories, check, stdin, commit):
             new_contents = getattr(sorter, 'output', None)
             if new_contents is None:
                 new_contents = original_contents
+
+            try:
+                # Pass code formatter.
+                new_contents = format_code(new_contents)
+            except Exception as e:
+                error_msg = 'Error formatting code: %s' % (e,)
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
 
         new_contents = fix_whitespace(new_contents.splitlines(True), eol, ends_with_eol)
         changed = new_contents != original_contents
@@ -206,6 +233,7 @@ def _peek_eol(line):
 
 def get_files_from_git():
     """Obtain from a list of modified files in the current repository."""
+
     def get_files(cmd):
         output = subprocess.check_output(cmd, shell=True)
         return output.splitlines()
