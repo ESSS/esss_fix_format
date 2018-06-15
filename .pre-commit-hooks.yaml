@@ -1,6 +1,6 @@
 -   id: esss_fix_format
     description: Simple code formatter and pre-commit checker used internally by ESSS
     name: ESSS Fix Format
-    entry: fix-format -k
+    entry: fix-format --commit
     language: python
     files: \.(py|pyw)$
