@@ -23,8 +23,8 @@ setup(
     version='1.5.1',
     description="ESSS code formatter and checker",
     long_description=readme + '\n\n' + changelog,
-    author="Bruno Oliveira",
-    author_email='bruno@esss.com.br',
+    author="ESSS",
+    author_email='foss@esss.co',
     url='https://github.com/esss/esss_fix_format',
     packages=[
         'esss_fix_format',
