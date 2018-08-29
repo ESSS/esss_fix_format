@@ -1,6 +1,6 @@
 flake8==2.6.0
 mock
-pip==8.1.2
+pip
 pytest
 pytest-mock
 tox==2.3.1

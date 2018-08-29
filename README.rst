@@ -4,7 +4,7 @@ esss_fix_format
 
 
 .. image:: https://img.shields.io/travis/ESSS/esss_fix_format/master.svg
-        :target: https://travis-ci.org/esss/esss_fix_format
+        :target: https://travis-ci.org/ESSS/esss_fix_format
 
 
 Simple code formatter and pre-commit checker used internally by ESSS.
@@ -17,15 +17,14 @@ Simple code formatter and pre-commit checker used internally by ESSS.
 Install
 -------
 
-``esss_fix_format`` is installed automatically by the ``ben10`` environment file.
-
-If you want to install it manually, execute from your project's conda environment:
-
 .. code-block:: sh
 
     conda install esss_fix_format
 
-If executed from the root environment (or another environment) isort could classify wrongly some modules.
+Note:
+
+If executed from the root environment (or another environment) isort could classify wrongly some modules,
+so, you should install and run it from the same environment you're using for your project.
 
 To obtain coloring support, you may also install ``colorama``:    
 
@@ -70,14 +69,14 @@ Follow this steps to re format an entire project and start using the pre-commit 
           Fixes and checks formatting according to ESSS standards.
 
         Options:
-          -k, --check   check if files are correctly formatted
-          --stdin       read filenames from stdin (1 per line)
-          -c, --commit  use modified files from git
+          -k, --check   Check if files are correctly formatted.
+          --stdin       Read filenames from stdin (1 per line).
+          -c, --commit  Use modified files from git.
+          --git-hooks   Add git pre-commit hooks to the repo in the current dir.
           --help        Show this message and exit.
 
 
-2. Search for all usages of ``LoadCppModule`` function (from ``coilib50``), and for each file that
-   uses it add ``isort:skipfile`` to the docstring:
+2. For each file you don't want imports reordered add ``isort:skipfile`` to the docstring:
 
     .. code-block:: python
 
@@ -117,28 +116,14 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
     .. code-block:: sh
 
-        $ git commit -anm "Apply fix-format on all files" --author="Dev <dev@esss.com.br>"
+        $ git commit -anm "Apply fix-format on all files" --author="fix-format"
 
+5. Push and run your branch on CI.
 
-5. Execute ``codegen`` and check if no files were modified:
+6. If all goes well, it's possible to install pre-commit hooks by using `ff --git-hooks` so
+   that any commit will be checked locally before commiting.  
 
-    .. code-block:: sh
-
-        $ inv codegen
-
-6. Push and run your branch on CI.
-
-7. If all goes well, finally make ``codegen`` install the hook automatically in your ``tasks.py``:
-
-    .. code-block:: python
-
-        @ctask
-        def _codegen(ctx, cache='none', flags=''):
-            ns.tasks['constants'](ctx)
-            ns.tasks['hooks'](ctx)
-
-
-8. Profit!
+7. Profit!
 
 
 Developing (conda)
@@ -150,8 +135,7 @@ Create a conda environent (using Python 3 here) and install it in development mo
 
     $ conda create -n esss-fix-format-py3 python=3
     $ source activate esss-fix-format-py3
-    $ pip install -e .
-    $ pip install . -r requirements_dev.txt
+    $ pip install -e . -r requirements_dev.txt
     $ pytest
 
 When implementing changes, please do it in a separate branch and open a PR.

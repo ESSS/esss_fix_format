@@ -289,7 +289,16 @@ def test_force_parentheses(tmpdir, sort_cfg_to_tmpdir):
 def test_no_isort_cfg(tmpdir):
     filename = tmpdir.join('test.py')
     filename.write('import os', 'w')
-    output = run([str(filename)], expected_exit=1)
+    try:
+        output = run([str(filename)], expected_exit=1)
+    except Exception:
+        for p in tmpdir.parts():
+            isort_cfg_file = p.join('.isort.cfg')
+            if isort_cfg_file.exists():
+                raise AssertionError(
+                    "Test does not expect that .isort.cfg is in one of the tmpdir parents (%s)" % (
+                        isort_cfg_file,))
+        raise
     output.fnmatch_lines(
         r'*ERROR .isort.cfg not available in repository (or line_length config < 80).')
 
@@ -324,6 +333,25 @@ def test_isort_cfg_in_parent(tmpdir, monkeypatch):
         '                    rmtree)',
     ])
     assert obtained == expected
+
+
+def test_install_pre_commit_hook(tmpdir):
+    tmpdir.mkdir('.git')
+
+    from esss_fix_format import hook_utils
+    hook_utils.install_pre_commit_hook(str(tmpdir))
+    assert tmpdir.join('.git', 'hooks', '_pre-commit-parts').exists()
+
+
+def test_install_pre_commit_hook_command_line(tmpdir):
+    tmpdir.mkdir('.git')
+    original = os.curdir
+    os.curdir = str(tmpdir)
+    try:
+        run(['--git-hooks'], 0)
+    finally:
+        os.curdir = original
+    assert tmpdir.join('.git', 'hooks', '_pre-commit-parts').exists()
 
 
 def run(args, expected_exit):
