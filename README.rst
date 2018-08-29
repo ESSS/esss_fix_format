@@ -26,14 +26,6 @@ Note:
 If executed from the root environment (or another environment) isort could classify wrongly some modules,
 so, you should install and run it from the same environment you're using for your project.
 
-To obtain coloring support, you may also install ``colorama``:    
-
-.. code-block:: sh
-
-    conda install colorama
-    
-(``colorama`` is not installed by default because we are still assessing if this is safe).    
-
 
 Usage
 -----
@@ -120,7 +112,7 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
 5. Push and run your branch on CI.
 
-6. If all goes well, it's possible to install pre-commit hooks by using `ff --git-hooks` so
+6. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
    that any commit will be checked locally before commiting.  
 
 7. Profit!
