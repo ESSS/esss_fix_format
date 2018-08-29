@@ -3,6 +3,17 @@ History
 =======
 
 
+1.6.0
+------
+
+* Provided ``ff --git-hooks`` to add pre-commit hooks which validate that the code is properly formatted
+  before being committed.
+
+1.5.x
+------
+
+* Adopted pydevf formatter (https://github.com/fabioz/PyDev.Formatter)
+
 1.4.3
 -----
 
