@@ -30,24 +30,63 @@ def should_format(filename):
     return any(fnmatch(os.path.split(filename)[-1], p) for p in PATTERNS)
 
 
+_created_processes = []
+
+
+def _wait_current_processes():
+    '''
+    Note: before actually starting a new process, make sure the previous have been
+    collected. This should not really be a problem in practice, but when running unit-
+    tests on windows starting a new process while another is on shutdown can sometimes
+    raise:
+
+    [WinError 6] The handle is invalid error
+
+    inside of subprocess.Popen when launching the new javaw executable (haven't been able
+    to find the reason this happens).
+    '''
+    if _created_processes:
+        import time
+        for process in _created_processes:
+            curr_time = time.time()
+            while process.poll() is None:
+                time.sleep(.05)
+                if time.time() - curr_time > 3:
+                    raise AssertionError(
+                        "Unable to run because a previously created formatter "
+                        "process has not been properly killed.")
+        del _created_processes[:]
+
+
 @click.command()
 @click.argument('files_or_directories', nargs=-1, type=click.Path(exists=True,
                                                                   dir_okay=True, writable=True))
 @click.option('-k', '--check', default=False, is_flag=True,
-              help='check if files are correctly formatted')
+              help='Check if files are correctly formatted.')
 @click.option('--stdin', default=False, is_flag=True,
-              help='read filenames from stdin (1 per line)')
+              help='Read filenames from stdin (1 per line).')
 @click.option('-c', '--commit', default=False, is_flag=True,
-              help='use modified files from git')
-def main(files_or_directories, check, stdin, commit):
+              help='Use modified files from git.')
+@click.option('--git-hooks', default=False, is_flag=True,
+              help='Add git pre-commit hooks to the repo in the current dir.')
+def main(files_or_directories, check, stdin, commit, git_hooks):
     """Fixes and checks formatting according to ESSS standards."""
+
+    if git_hooks:
+        from esss_fix_format.hook_utils import install_pre_commit_hook
+        install_pre_commit_hook()  # uses the current directory by default.
+        return
 
     formatter = []
 
     def format_code(code_to_format):
         if not formatter:
+            _wait_current_processes()
+
             # Start-up pydevf server on demand.
-            formatter.append(pydevf.start_format_server())
+            process = pydevf.start_format_server()
+            formatter.append(process)
+            _created_processes.append(process)
         return pydevf.format_code_server(formatter[0], code_to_format)
 
     try:
