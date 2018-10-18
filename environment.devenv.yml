@@ -1,0 +1,18 @@
+{% set CONDA_PY = os.environ.get('CONDA_PY', '36') %}
+name: esss-fix-format-py{{ CONDA_PY }}
+
+dependencies:
+  # run
+  - click>=6.0
+  - isort>=4.3.4
+  - python={{ '.'.join(CONDA_PY) }}
+  - pydevf==0.1.5
+
+  # develop
+  - flake8>=3.5.0
+  - mock>=1.0.1
+  - pygments>=2.2.0
+  - pytest>=3.8.0
+  - pytest-mock>=1.10.0
+  # restructuredtext_lint 1.1.3 has a problem in Windows
+  - restructuredtext_lint==1.0.1

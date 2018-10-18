@@ -1,0 +1,21 @@
+platform:
+  - x64
+environment:
+  CONDA_DIR: C:\Miniconda36-x64
+  matrix:
+  - CONDA_PY: 27
+  - CONDA_PY: 36
+build: off
+init:
+  - set PATH=%CONDA_DIR%;%CONDA_DIR%\Scripts;%CONDA_DIR%\Library\bin;%PATH%
+install:
+  - conda config --system --set always_yes yes --set changeps1 no
+  - conda config --system --append channels conda-forge
+  - conda config --system --append channels esss
+  - conda install -n base conda-devenv
+  - conda devenv
+  - call activate esss-fix-format-py%CONDA_PY%
+test_script:
+  - flake8 esss_fix_format tests
+  - rst-lint CHANGELOG.rst README.rst
+  - pytest

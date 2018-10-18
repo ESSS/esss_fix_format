@@ -1,7 +1,0 @@
-flake8==2.6.0
-mock
-pip
-pytest
-pytest-mock
-tox==2.3.1
-wheel==0.29.0
