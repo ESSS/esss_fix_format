@@ -23,6 +23,14 @@ def sort_cfg_to_tmpdir(tmpdir):
 
 
 @pytest.fixture
+def dot_clang_format_to_tmpdir(tmpdir):
+    import shutil
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), '..', '.clang-format'),
+        str(tmpdir.join('.clang-format')))
+
+
+@pytest.fixture
 def input_file(tmpdir, sort_cfg_to_tmpdir):
     # imports out-of-order included in example so isort detects as necessary to change
     source = textwrap.dedent(
@@ -352,6 +360,40 @@ def test_install_pre_commit_hook_command_line(tmpdir):
     finally:
         os.curdir = original
     assert tmpdir.join('.git', 'hooks', '_pre-commit-parts').exists()
+
+
+def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmpdir):
+    '''
+    Won't format C++ if there's no `.clang-format` file in the directory or any directory above.
+    '''
+    source = 'int   a;'
+    filename = tmpdir.join('a.cpp')
+    filename.write(source)
+    check_valid_file(filename)
+    obtained = filename.read()
+    assert obtained == source
+
+
+def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_invalid(tmpdir):
+    source = 'int   a;  '
+    filename = tmpdir.join('a.cpp')
+    filename.write(source)
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
+    check_valid_file(filename)
+    obtained = filename.read()
+    assert obtained == 'int   a;'
+
+
+def test_clang_format(tmpdir, dot_clang_format_to_tmpdir):
+    source = 'int   a;  '
+    filename = tmpdir.join('a.cpp')
+    filename.write(source)
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
+    check_valid_file(filename)
+    obtained = filename.read()
+    assert obtained == 'int a;'
 
 
 def run(args, expected_exit):
