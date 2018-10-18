@@ -60,3 +60,4 @@ target/
 
 .idea
 .pytest_cache
+/environment.yml

@@ -113,7 +113,7 @@ Follow this steps to re format an entire project and start using the pre-commit 
 5. Push and run your branch on CI.
 
 6. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
-   that any commit will be checked locally before commiting.  
+   that any commit will be checked locally before commiting.
 
 7. Profit!
 
@@ -121,13 +121,14 @@ Follow this steps to re format an entire project and start using the pre-commit 
 Developing (conda)
 ------------------
 
-Create a conda environent (using Python 3 here) and install it in development mode:
+Create a conda environent (using Python 3 here) and install it in development mode.
+Make sure you have conda configured to use ``conda-forge`` and ``esss`` conda channels.
 
 .. code-block:: sh
 
-    $ conda create -n esss-fix-format-py3 python=3
-    $ source activate esss-fix-format-py3
-    $ pip install -e . -r requirements_dev.txt
+    $ conda install -n base conda-devenv
+    $ conda devenv
+    $ source activate esss-fix-format-py36
     $ pytest
 
 When implementing changes, please do it in a separate branch and open a PR.
