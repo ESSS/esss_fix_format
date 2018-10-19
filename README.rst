@@ -6,12 +6,17 @@ esss_fix_format
 .. image:: https://img.shields.io/travis/ESSS/esss_fix_format/master.svg
         :target: https://travis-ci.org/ESSS/esss_fix_format
 
+.. image:: https://ci.appveyor.com/api/projects/status/github/ESSS/esss_fix_format?branch=master&svg=true
+        :target: https://ci.appveyor.com/project/ESSS/esss-fix-format
+
 
 Simple code formatter and pre-commit checker used internally by ESSS.
 
-* Imports sorted using `isort <https://pypi.python.org/pypi/isort>`_;
-* Trim right spaces;
-* Expand tabs;
+* Imports sorted using `isort <https://pypi.python.org/pypi/isort>`_
+* Trim right spaces
+* Expand tabs
+* Formats Python code using `PyDev Code Formatter <https://github.com/fabioz/PyDev.Formatter>`_
+* Formats C++ code using `clang-format <https://clang.llvm.org/docs/ClangFormat.html>`_ if a ``.clang-format`` file is available
 
 
 Install
