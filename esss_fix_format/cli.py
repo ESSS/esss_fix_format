@@ -39,7 +39,8 @@ def should_format(filename):
     return any(fnmatch(os.path.split(filename)[-1], p) for p in PATTERNS)
 
 
-# caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the disk too many times
+# caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
+# disk too many times
 __HAS_DOT_CLANG_FORMAT = dict()
 
 
@@ -47,7 +48,8 @@ def should_use_clang_format(filename):
     filename = os.path.abspath(filename)
     path_components = filename.split(os.sep)[:-1]
     paths_to_try = tuple(
-        os.sep.join(path_components[:i] + ['.clang-format']) for i in range(1, len(path_components) + 1))
+        os.sep.join(path_components[:i] + ['.clang-format'])
+        for i in range(1, len(path_components) + 1))
 
     # From file directory, going upwards, find the first directory already cached
     for i in range(len(paths_to_try) - 1, -1, -1):
@@ -138,25 +140,35 @@ def main(files_or_directories, check, stdin, commit, git_hooks):
 
 
 def _process_file(filename, check, format_code):
+    '''
+    :returns: a tuple with (changed, errors, formatter):
+        - `changed` is a boolean, True if the file was changed
+        - `errors` is a list with 0 or more error messages
+        - `formatter` is an optional string with the formatter used (None if it does not apply)
+    '''
     import isort.settings
 
+    # Initialize results variables
     changed = False
     errors = []
+    formatter = None
 
     if not should_format(filename):
         click.secho(click.format_filename(filename) + ': Unknown file type', fg='white')
-        return changed, errors
+        return changed, errors, formatter
 
     if is_cpp(filename) and should_use_clang_format(filename):
+        formatter = 'clang-format'
         if check:
-            output = subprocess.check_output(['clang-format', '-output-replacements-xml', filename], shell=True)
-            changed = '<replacement ' in output
+            output = subprocess.check_output(
+                'clang-format -output-replacements-xml "%s"' % filename, shell=True)
+            changed = b'<replacement ' in output
         else:
             mtime = os.path.getmtime(filename)
-            subprocess.check_output(['clang-format', '-i', filename], shell=True)
+            subprocess.check_output('clang-format -i "%s"' % filename, shell=True)
             changed = os.path.getmtime(filename) != mtime
 
-        return changed, errors
+        return changed, errors, formatter
 
     with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
         try:
@@ -174,7 +186,7 @@ def _process_file(filename, check, format_code):
             error_msg = click.format_filename(filename) + msg
             click.secho(error_msg, fg='red')
             errors.append(error_msg)
-            return changed, errors
+            return changed, errors, formatter
 
     new_contents = original_contents
 
@@ -208,6 +220,8 @@ def _process_file(filename, check, format_code):
             error_msg = 'Error formatting code: %s' % (e,)
             click.secho(error_msg, fg='red')
             errors.append(error_msg)
+    elif is_cpp(filename):
+        formatter = 'legacy formatter'
 
     new_contents = fix_whitespace(new_contents.splitlines(True), eol, ends_with_eol)
     changed = new_contents != original_contents
@@ -216,7 +230,7 @@ def _process_file(filename, check, format_code):
         with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
             f.write(new_contents)
 
-    return changed, errors
+    return changed, errors, formatter
 
 
 def _main(files_or_directories, check, stdin, commit, format_code):
@@ -235,12 +249,15 @@ def _main(files_or_directories, check, stdin, commit, format_code):
     changed_files = []
     errors = []
     for filename in files:
-        changed, new_errors = _process_file(filename, check, format_code)
+        changed, new_errors, formatter = _process_file(filename, check, format_code)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
-        click.secho(click.format_filename(filename) + ': ' + status, fg=color)
+        msg = click.format_filename(filename) + ': ' + status
+        if formatter is not None:
+            msg += ' (' + formatter + ')'
+        click.secho(msg, fg=color)
 
     def banner(caption):
         caption = ' %s ' % caption

@@ -369,7 +369,7 @@ def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmpdir
     source = 'int   a;'
     filename = tmpdir.join('a.cpp')
     filename.write(source)
-    check_valid_file(filename)
+    check_valid_file(filename, formatter='legacy formatter')
     obtained = filename.read()
     assert obtained == source
 
@@ -378,9 +378,9 @@ def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_invalid(tmpd
     source = 'int   a;  '
     filename = tmpdir.join('a.cpp')
     filename.write(source)
-    check_invalid_file(filename)
-    fix_invalid_file(filename)
-    check_valid_file(filename)
+    check_invalid_file(filename, formatter='legacy formatter')
+    fix_invalid_file(filename, formatter='legacy formatter')
+    check_valid_file(filename, formatter='legacy formatter')
     obtained = filename.read()
     assert obtained == 'int   a;'
 
@@ -389,9 +389,9 @@ def test_clang_format(tmpdir, dot_clang_format_to_tmpdir):
     source = 'int   a;  '
     filename = tmpdir.join('a.cpp')
     filename.write(source)
-    check_invalid_file(filename)
-    fix_invalid_file(filename)
-    check_valid_file(filename)
+    check_invalid_file(filename, formatter='clang-format')
+    fix_invalid_file(filename, formatter='clang-format')
+    check_valid_file(filename, formatter='clang-format')
     obtained = filename.read()
     assert obtained == 'int a;'
 
@@ -410,18 +410,22 @@ def fix_valid_file(input_file):
     output.fnmatch_lines(str(input_file) + ': Skipped')
 
 
-def check_valid_file(input_file):
+def _get_formatter_msg(formatter):
+    return (' (%s)' % formatter) if formatter is not None else ''
+
+
+def check_valid_file(input_file, formatter=None):
     output = run(['--check', str(input_file)], expected_exit=0)
-    output.fnmatch_lines(str(input_file) + ': OK')
+    output.fnmatch_lines(str(input_file) + ': OK' + _get_formatter_msg(formatter))
 
 
-def fix_invalid_file(input_file):
+def fix_invalid_file(input_file, formatter=None):
     output = run([str(input_file)], expected_exit=0)
-    output.fnmatch_lines(str(input_file) + ': Fixed')
+    output.fnmatch_lines(str(input_file) + ': Fixed' + _get_formatter_msg(formatter))
 
 
-def check_invalid_file(input_file):
+def check_invalid_file(input_file, formatter=None):
     output = run(['--check', str(input_file)], expected_exit=1)
-    output.fnmatch_lines(str(input_file) + ': Failed')
+    output.fnmatch_lines(str(input_file) + ': Failed' + _get_formatter_msg(formatter))
     output.fnmatch_lines('*== failed checks ==*')
     output.fnmatch_lines(str(input_file))

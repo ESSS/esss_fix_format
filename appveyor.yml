@@ -19,3 +19,4 @@ test_script:
   - flake8 esss_fix_format tests
   - rst-lint CHANGELOG.rst README.rst
   - pytest
+  - python esss_fix_format\cli.py -k .
