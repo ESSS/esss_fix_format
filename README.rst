@@ -86,7 +86,17 @@ Follow this steps to re format an entire project and start using the pre-commit 
         ConfigurePyroSettings()  # must be called before importing Pyro4
         import Pyro4  # isort:skip
 
-4. Execute:
+4. If you want to use ``clang-format`` to format C++ code, you should copy the ``.clang-format``
+   file from ``esss-fix-format`` to the root of your project. This is optional for now in order
+   to allow incremental changes (if this file is not present, the legacy C++ formatter will
+   be used):
+
+    .. code-block:: sh
+
+        $ cd /path/to/repo/root
+        $ curl -O https://raw.githubusercontent.com/ESSS/esss_fix_format/master/.clang-format
+
+5. Execute:
 
     .. code-block:: sh
 
@@ -110,12 +120,12 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
         $ git commit -anm "Apply fix-format on all files" --author="fix-format"
 
-5. Push and run your branch on CI.
+6. Push and run your branch on CI.
 
-6. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
+7. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
    that any commit will be checked locally before commiting.
 
-7. Profit!
+8. Profit!
 
 
 Developing (conda)

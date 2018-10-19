@@ -7,27 +7,69 @@ import sys
 import click
 import pydevf
 
-PATTERNS = {
-    '*.py',
+CPP_PATTERNS = {
     '*.cpp',
     '*.c',
     '*.h',
     '*.hpp',
     '*.hxx',
     '*.cxx',
+}
+
+PATTERNS = {
+    '*.py',
     '*.java',
     '*.js',
     '*.pyx',
     '*.pxd',
     'CMakeLists.txt',
     '*.cmake',
-}
+}.union(CPP_PATTERNS)
+
+
+def is_cpp(filename):
+    """Return True if the filename is of a type that should be treated as C++ source."""
+    from fnmatch import fnmatch
+    return any(fnmatch(os.path.split(filename)[-1], p) for p in CPP_PATTERNS)
 
 
 def should_format(filename):
     """Return True if the filename is of a type that is supported by this tool."""
     from fnmatch import fnmatch
     return any(fnmatch(os.path.split(filename)[-1], p) for p in PATTERNS)
+
+
+# caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
+# disk too many times
+__HAS_DOT_CLANG_FORMAT = dict()
+
+
+def should_use_clang_format(filename):
+    filename = os.path.abspath(filename)
+    path_components = filename.split(os.sep)[:-1]
+    paths_to_try = tuple(
+        os.sep.join(path_components[:i] + ['.clang-format'])
+        for i in range(1, len(path_components) + 1))
+
+    # From file directory, going upwards, find the first directory already cached
+    for i in range(len(paths_to_try) - 1, -1, -1):
+        path = paths_to_try[i]
+        has_it = __HAS_DOT_CLANG_FORMAT.get(path, None)
+        if has_it is not None:
+            break
+
+    if has_it:
+        return True
+
+    # Go downwards again, looking in the disk and filling the cache if found
+    found = False
+    for path in paths_to_try[i + 1:]:
+        if found:
+            __HAS_DOT_CLANG_FORMAT[path] = True
+            continue
+        found = __HAS_DOT_CLANG_FORMAT[path] = os.path.isfile(path)
+
+    return found
 
 
 _created_processes = []
@@ -97,8 +139,101 @@ def main(files_or_directories, check, stdin, commit, git_hooks):
             pydevf.stop_format_server(formatter[0])
 
 
-def _main(files_or_directories, check, stdin, commit, format_code):
+def _process_file(filename, check, format_code):
+    '''
+    :returns: a tuple with (changed, errors, formatter):
+        - `changed` is a boolean, True if the file was changed
+        - `errors` is a list with 0 or more error messages
+        - `formatter` is an optional string with the formatter used (None if it does not apply)
+    '''
     import isort.settings
+
+    # Initialize results variables
+    changed = False
+    errors = []
+    formatter = None
+
+    if not should_format(filename):
+        click.secho(click.format_filename(filename) + ': Unknown file type', fg='white')
+        return changed, errors, formatter
+
+    if is_cpp(filename) and should_use_clang_format(filename):
+        formatter = 'clang-format'
+        if check:
+            output = subprocess.check_output(
+                'clang-format -output-replacements-xml "%s"' % filename, shell=True)
+            changed = b'<replacement ' in output
+        else:
+            mtime = os.path.getmtime(filename)
+            subprocess.check_output('clang-format -i "%s"' % filename, shell=True)
+            changed = os.path.getmtime(filename) != mtime
+
+        return changed, errors, formatter
+
+    with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
+        try:
+            # There is an issue with isort (https://github.com/timothycrosley/isort/issues/350,
+            # even though closed it is not fixed!) that changes EOL to \n when there is a import
+            # reorder.
+            #
+            # So to be safe, it is necessary to peek first line to detect EOL BEFORE any
+            # processing happens.
+            first_line = f.readline()
+            f.seek(0)
+            original_contents = f.read()
+        except UnicodeDecodeError as e:
+            msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+            error_msg = click.format_filename(filename) + msg
+            click.secho(error_msg, fg='red')
+            errors.append(error_msg)
+            return changed, errors, formatter
+
+    new_contents = original_contents
+
+    eol = _peek_eol(first_line)
+    ends_with_eol = new_contents.endswith(eol)
+    extension = os.path.normcase(os.path.splitext(filename)[1])
+
+    if extension == '.py':
+        settings_path = os.path.abspath(os.path.dirname(filename))
+        settings_loaded = isort.settings.from_path(settings_path)
+        if settings_loaded['line_length'] < 80:
+            # The default isort configuration has 79 chars, so, if the passed
+            # does not have more than that, complain that .isort.cfg is not configured.
+            msg = ': ERROR .isort.cfg not available in repository (or line_length config < 80).'
+            error_msg = click.format_filename(filename) + msg
+            click.secho(error_msg, fg='red')
+            errors.append(error_msg)
+
+        sorter = isort.SortImports(file_contents=new_contents, settings_path=settings_path)
+        # On older versions if the entire file is skipped (eg.: by an "isort:skip_file")
+        # instruction in the docstring, SortImports doesn't even contain an "output" attribute.
+        # In some recent versions it is `None`.
+        new_contents = getattr(sorter, 'output', None)
+        if new_contents is None:
+            new_contents = original_contents
+
+        try:
+            # Pass code formatter.
+            new_contents = format_code(new_contents)
+        except Exception as e:
+            error_msg = 'Error formatting code: %s' % (e,)
+            click.secho(error_msg, fg='red')
+            errors.append(error_msg)
+    elif is_cpp(filename):
+        formatter = 'legacy formatter'
+
+    new_contents = fix_whitespace(new_contents.splitlines(True), eol, ends_with_eol)
+    changed = new_contents != original_contents
+
+    if not check and changed:
+        with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
+            f.write(new_contents)
+
+    return changed, errors, formatter
+
+
+def _main(files_or_directories, check, stdin, commit, format_code):
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
     elif commit:
@@ -114,72 +249,15 @@ def _main(files_or_directories, check, stdin, commit, format_code):
     changed_files = []
     errors = []
     for filename in files:
-        if not should_format(filename):
-            click.secho(click.format_filename(filename) + ': Unknown file type', fg='white')
-            continue
-
-        with io.open(filename, 'r', encoding='UTF-8', newline='') as f:
-            try:
-                # There is an issue with isort (https://github.com/timothycrosley/isort/issues/350,
-                # even though closed it is not fixed!) that changes EOL to \n when there is a import
-                # reorder.
-                #
-                # So to be safe, it is necessary to peek first line to detect EOL BEFORE any
-                # processing happens.
-                first_line = f.readline()
-                f.seek(0)
-                original_contents = f.read()
-            except UnicodeDecodeError as e:
-                msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
-                error_msg = click.format_filename(filename) + msg
-                click.secho(error_msg, fg='red')
-                errors.append(error_msg)
-                continue
-
-        new_contents = original_contents
-
-        eol = _peek_eol(first_line)
-        ends_with_eol = new_contents.endswith(eol)
-        extension = os.path.normcase(os.path.splitext(filename)[1])
-
-        if extension == '.py':
-            settings_path = os.path.abspath(os.path.dirname(filename))
-            settings_loaded = isort.settings.from_path(settings_path)
-            if settings_loaded['line_length'] < 80:
-                # The default isort configuration has 79 chars, so, if the passed
-                # does not have more than that, complain that .isort.cfg is not configured.
-                msg = ': ERROR .isort.cfg not available in repository (or line_length config < 80).'
-                error_msg = click.format_filename(filename) + msg
-                click.secho(error_msg, fg='red')
-                errors.append(error_msg)
-
-            sorter = isort.SortImports(file_contents=new_contents, settings_path=settings_path)
-            # On older versions if the entire file is skipped (eg.: by an "isort:skip_file")
-            # instruction in the docstring, SortImports doesn't even contain an "output" attribute.
-            # In some recent versions it is `None`.
-            new_contents = getattr(sorter, 'output', None)
-            if new_contents is None:
-                new_contents = original_contents
-
-            try:
-                # Pass code formatter.
-                new_contents = format_code(new_contents)
-            except Exception as e:
-                error_msg = 'Error formatting code: %s' % (e,)
-                click.secho(error_msg, fg='red')
-                errors.append(error_msg)
-
-        new_contents = fix_whitespace(new_contents.splitlines(True), eol, ends_with_eol)
-        changed = new_contents != original_contents
-
-        if not check and changed:
-            with io.open(filename, 'w', encoding='UTF-8', newline='') as f:
-                f.write(new_contents)
-
+        changed, new_errors, formatter = _process_file(filename, check, format_code)
+        errors.extend(new_errors)
         if changed:
             changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
-        click.secho(click.format_filename(filename) + ': ' + status, fg=color)
+        msg = click.format_filename(filename) + ': ' + status
+        if formatter is not None:
+            msg += ' (' + formatter + ')'
+        click.secho(msg, fg=color)
 
     def banner(caption):
         caption = ' %s ' % caption
