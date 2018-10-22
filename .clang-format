@@ -30,6 +30,7 @@ BreakConstructorInitializers: BeforeComma
 ColumnLimit: '100'
 FixNamespaceComments: 'true'
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
+NamespaceIndentation: None
 SpaceAfterCStyleCast: 'true'
 SpacesBeforeTrailingComments: '2'
 
