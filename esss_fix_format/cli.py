@@ -165,7 +165,19 @@ def _process_file(filename, check, format_code):
             changed = b'<replacement ' in output
         else:
             mtime = os.path.getmtime(filename)
-            subprocess.check_output('clang-format -i "%s"' % filename, shell=True)
+            
+            # checking if the terminal command is valid
+            # might throw an exception if clang-format is not recognized
+            try:
+                subprocess.check_output('clang-format -i "%s"' % filename, shell=True)
+            except subprocess.CalledProcessError as e:
+                errors.append(": ERROR")
+                msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+                error_msg = click.format_filename(filename) + msg
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
+                return changed, errors, formatter
+                
             changed = os.path.getmtime(filename) != mtime
 
         return changed, errors, formatter
