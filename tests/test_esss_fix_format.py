@@ -362,6 +362,35 @@ def test_install_pre_commit_hook_command_line(tmpdir):
     assert tmpdir.join('.git', 'hooks', '_pre-commit-parts').exists()
 
 
+def test_missing_bom_error_for_non_ascii_cpp(tmpdir):
+    '''
+    Throws an error for not encoding with "UTF-8 with BOM" of non-ascii cpp file.
+    '''
+    source = u'int     ŢōŶ;   '
+    filename = tmpdir.join('a.cpp')
+    filename.write_text(source, encoding='UTF-8')
+    output = run([str(filename)], expected_exit=1)
+    output.fnmatch_lines(
+        str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII*')
+    output.fnmatch_lines('*== ERRORS ==*')
+    output.fnmatch_lines(
+        str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII*')
+
+
+def test_bom_encoded_for_non_ascii_cpp(tmpdir, dot_clang_format_to_tmpdir):
+    '''
+    Formats non-ascii cpp as usual, if it has 'UTF-8 encoding with BOM'
+    '''
+    source = u'int     ŢōŶ;   '
+    filename = tmpdir.join('a.cpp')
+    filename.write_text(source, encoding='UTF-8-SIG')
+    check_invalid_file(filename, formatter='clang-format')
+    fix_invalid_file(filename, formatter='clang-format')
+    check_valid_file(filename, formatter='clang-format')
+    obtained = filename.read_text('UTF-8-SIG')
+    assert obtained == u'int ŢōŶ;'
+
+
 def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmpdir):
     '''
     Won't format C++ if there's no `.clang-format` file in the directory or any directory above.

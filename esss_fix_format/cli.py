@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import codecs
 import io
 import os
+import re
 import subprocess
 import sys
 
@@ -156,6 +158,25 @@ def _process_file(filename, check, format_code):
     if not should_format(filename):
         click.secho(click.format_filename(filename) + ': Unknown file type', fg='white')
         return changed, errors, formatter
+
+    if is_cpp(filename):
+        with io.open(filename, 'rb') as f:
+            content_bytes = f.read()
+            content = content_bytes.decode('UTF-8')
+            # Remove all ASCII-characters, by substituting all printable ASCII-characters
+            # with NULL character. Here, ' ' is the first printable ASCII-character (code 32)
+            # and '~' is the last printable ASCII-character (code 126).
+            non_ascii = re.sub('[ -~]', '', content).strip()
+            use_bom = len(non_ascii) > 0
+            if use_bom and not content_bytes.startswith(codecs.BOM_UTF8):
+                msg = (
+                    ': ERROR Not a valid UTF-8 encoded file, since it contains'
+                    ' non-ASCII characters. Ensure it has UTF-8 encoding with BOM.'
+                )
+                error_msg = click.format_filename(filename) + msg
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
+                return changed, errors, formatter
 
     if is_cpp(filename) and should_use_clang_format(filename):
         formatter = 'clang-format'
