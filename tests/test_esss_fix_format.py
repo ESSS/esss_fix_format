@@ -366,9 +366,9 @@ def test_missing_bom_error_for_non_ascii_cpp(tmpdir):
     '''
     Throws an error for not encoding with "UTF-8 with BOM" of non-ascii cpp file.
     '''
-    source = 'int     ŢōŶ;   '
+    source = u'int     ŢōŶ;   '
     filename = tmpdir.join('a.cpp')
-    filename.write(source)
+    filename.write_text(source, encoding='UTF-8')
     output = run([str(filename)], expected_exit=1)
     output.fnmatch_lines(
         str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII*')
