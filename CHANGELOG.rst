@@ -3,6 +3,11 @@ History
 =======
 
 
+Unreleased
+----------
+
+* Check if .cpp file is non-ascii, ensure it has BOM at the beginning of the file.
+
 1.6.0
 ------
 
