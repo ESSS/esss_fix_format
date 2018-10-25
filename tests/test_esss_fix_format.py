@@ -371,10 +371,10 @@ def test_missing_bom_error_for_non_ascii_cpp(tmpdir):
     filename.write(source)
     output = run([str(filename)], expected_exit=1)
     output.fnmatch_lines(
-        str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII characters*')
+        str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII*')
     output.fnmatch_lines('*== ERRORS ==*')
     output.fnmatch_lines(
-        str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII characters*')
+        str(filename) + ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII*')
 
 
 def test_bom_encoded_for_non_ascii_cpp(tmpdir, dot_clang_format_to_tmpdir):
@@ -383,11 +383,11 @@ def test_bom_encoded_for_non_ascii_cpp(tmpdir, dot_clang_format_to_tmpdir):
     '''
     source = u'int     ŢōŶ;   '
     filename = tmpdir.join('a.cpp')
-    filename.write_text(source, encoding='utf-8-sig')
+    filename.write_text(source, encoding='UTF-8-SIG')
     check_invalid_file(filename, formatter='clang-format')
     fix_invalid_file(filename, formatter='clang-format')
     check_valid_file(filename, formatter='clang-format')
-    obtained = filename.read_text('utf-8-sig')
+    obtained = filename.read_text('UTF-8-SIG')
     assert obtained == u'int ŢōŶ;'
 
 

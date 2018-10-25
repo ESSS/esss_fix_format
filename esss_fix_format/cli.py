@@ -162,7 +162,10 @@ def _process_file(filename, check, format_code):
     if is_cpp(filename):
         with io.open(filename, 'rb') as f:
             content_bytes = f.read()
-            content = content_bytes.decode()
+            content = content_bytes.decode('UTF-8')
+            # Remove all ASCII-characters, by substituting all printable ASCII-characters
+            # with NULL character. Here, ' ' is the first printable ASCII-character (code 32)
+            # and '~' is the last printable ASCII-character (code 126).
             non_ascii = re.sub('[ -~]', '', content).strip()
             use_bom = len(non_ascii) > 0
             if use_bom and not content_bytes.startswith(codecs.BOM_UTF8):
