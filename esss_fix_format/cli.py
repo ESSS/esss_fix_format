@@ -164,9 +164,12 @@ def _process_file(filename, check, format_code):
             content_bytes = f.read()
             content = content_bytes.decode()
             non_ascii = re.sub('[ -~]', '', content).strip()
-            use_bom = non_ascii is not ''
+            use_bom = len(non_ascii) > 0
             if use_bom and not content_bytes.startswith(codecs.BOM_UTF8):
-                msg = ': ERROR Not a valid UTF-8 encoded file, since it contains non-ASCII characters. Ensure it has UTF-8 encoding with BOM.'
+                msg = (
+                    ': ERROR Not a valid UTF-8 encoded file, since it contains'
+                    ' non-ASCII characters. Ensure it has UTF-8 encoding with BOM.'
+                )
                 error_msg = click.format_filename(filename) + msg
                 click.secho(error_msg, fg='red')
                 errors.append(error_msg)
