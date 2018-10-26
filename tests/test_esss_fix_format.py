@@ -396,6 +396,33 @@ def test_clang_format(tmpdir, dot_clang_format_to_tmpdir):
     assert obtained == 'int a;'
 
 
+def test_missing_clang_format(tmpdir, mocker, dot_clang_format_to_tmpdir):
+    source = 'int   a;  '
+    filename = tmpdir.join('a.cpp')
+    filename.write(source)
+
+    # Check for invalid format:
+    # File will not pass in the format check
+    check_invalid_file(filename, formatter='clang-format')
+
+    expected_failed_command = 'clang-format -i "main.cpp"'
+    expected_error_code = 1
+    expected_error_message = "Command 'clang-format -i \"main.cpp\"' returned non-zero exit status 1"
+
+    m = mocker.patch.object(
+        subprocess,
+        'check_output',
+        side_effect=subprocess.CalledProcessError(expected_error_code, expected_failed_command))
+
+    # Check if the command-line instruction returned an exception
+    # of type CalledProcessError with the correct error message
+    check_cli_error_output(filename, expected_error_message, formatter='clang-format')
+
+    # test should skip file, so no changes are made
+    obtained = filename.read()
+    assert obtained == source
+
+
 def run(args, expected_exit):
     from _pytest.pytester import LineMatcher
     runner = CliRunner()
@@ -422,6 +449,12 @@ def check_valid_file(input_file, formatter=None):
 def fix_invalid_file(input_file, formatter=None):
     output = run([str(input_file)], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ': Fixed' + _get_formatter_msg(formatter))
+
+
+def check_cli_error_output(input_file, expected_error_message, formatter=None):
+    output = run([str(input_file)], expected_exit=1)
+    msg = ': ERROR (CalledProcessError: %s)' % (expected_error_message)
+    output.fnmatch_lines(str(input_file) + msg)
 
 
 def check_invalid_file(input_file, formatter=None):
