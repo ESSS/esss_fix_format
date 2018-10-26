@@ -171,7 +171,8 @@ def _process_file(filename, check, format_code):
             try:
                 subprocess.check_output('clang-format -i "%s"' % filename, shell=True)
             except subprocess.CalledProcessError as e:
-                msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+                msg = ': ERROR (%s: %s): ' % (type(e).__name__, e)
+                msg += 'Please check if "clang-format" is installed and accessible'
                 error_msg = click.format_filename(filename) + msg
                 click.secho(error_msg, fg='red')
                 errors.append(error_msg)

@@ -405,18 +405,24 @@ def test_missing_clang_format(tmpdir, mocker, dot_clang_format_to_tmpdir):
     # File will not pass in the format check
     check_invalid_file(filename, formatter='clang-format')
 
-    expected_failed_command = 'clang-format -i "main.cpp"'
+    expected_command = 'clang-format -i "main.cpp"'
     expected_error_code = 1
-    expected_error_message = "Command 'clang-format -i \"main.cpp\"' returned non-zero exit status 1"
+    expected_error_message = "Command '%s' returned non-zero exit status 1" % expected_command
+    message_extra_details = 'Please check if "clang-format" is installed and accessible'
 
-    m = mocker.patch.object(
+    mocker.patch.object(
         subprocess,
         'check_output',
-        side_effect=subprocess.CalledProcessError(expected_error_code, expected_failed_command))
+        side_effect=subprocess.CalledProcessError(expected_error_code, expected_command))
 
     # Check if the command-line instruction returned an exception
     # of type CalledProcessError with the correct error message
-    check_cli_error_output(filename, expected_error_message, formatter='clang-format')
+    check_cli_error_output(
+        filename,
+        expected_error_message,
+        message_extra_details,
+        formatter='clang-format'
+    )
 
     # test should skip file, so no changes are made
     obtained = filename.read()
@@ -451,9 +457,10 @@ def fix_invalid_file(input_file, formatter=None):
     output.fnmatch_lines(str(input_file) + ': Fixed' + _get_formatter_msg(formatter))
 
 
-def check_cli_error_output(input_file, expected_error_message, formatter=None):
+def check_cli_error_output(input_file, expected_error_message, message_details, formatter=None):
     output = run([str(input_file)], expected_exit=1)
-    msg = ': ERROR (CalledProcessError: %s)' % (expected_error_message)
+    msg = ': ERROR (CalledProcessError: %s): ' % (expected_error_message)
+    msg += message_details
     output.fnmatch_lines(str(input_file) + msg)
 
 
