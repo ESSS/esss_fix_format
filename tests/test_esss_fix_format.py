@@ -407,9 +407,10 @@ def test_missing_clang_format(tmpdir, mocker, dot_clang_format_to_tmpdir):
 
     expected_command = 'clang-format -i "main.cpp"'
     expected_error_code = 1
-    expected_error_message = "Command '%s' returned non-zero exit status 1" % expected_command
-    if sys.version_info.major == 2:
-        expected_error_message += '.'
+
+    # The '*' is used to indicate that there may be a '.' in
+    # the message depending on the python version
+    expected_error_message = "Command '%s' returned non-zero exit status 1*" % expected_command
     message_extra_details = 'Please check if "clang-format" is installed and accessible'
 
     mocker.patch.object(
