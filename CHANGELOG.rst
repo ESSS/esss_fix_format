@@ -3,10 +3,12 @@ History
 =======
 
 
-Unreleased
+1.7.0
 ----------
 
 * Check if .cpp file is non-ascii, ensure it has BOM at the beginning of the file.
+* Emmit message when clang-format is not installed (or usable).
+* Ensure python files do not include BOM.
 
 1.6.0
 ------
