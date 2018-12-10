@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import codecs
 import io
 import os
 import subprocess
@@ -208,6 +209,25 @@ def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
     filename = tmpdir.join('test.py')
     filename.write(u'\r\n', 'w')
     run([str(filename)], expected_exit=0)
+
+
+@pytest.mark.parametrize('check', [True, False])
+def test_python_with_bom(tmpdir, sort_cfg_to_tmpdir, check):
+    filename = tmpdir.join('test.py')
+    original_contents = codecs.BOM_UTF8 + b'import io\r\n'
+    filename.write(original_contents, 'wb')
+
+    args = [str(filename)]
+    if check:
+        args = ['--check'] + args
+
+    run(args, expected_exit=1)
+
+    current_contents = filename.read('rb')
+    if check:
+        assert current_contents == original_contents
+    else:
+        assert current_contents == original_contents[len(codecs.BOM_UTF8):]
 
 
 @pytest.mark.parametrize(

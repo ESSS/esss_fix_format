@@ -253,6 +253,14 @@ def _process_file(filename, check, format_code):
             error_msg = 'Error formatting code: %s' % (e,)
             click.secho(error_msg, fg='red')
             errors.append(error_msg)
+
+        if new_contents and (new_contents[0] == codecs.BOM_UTF8.decode('UTF-8')):
+            msg = ': ERROR python file should not have a BOM.'
+            error_msg = click.format_filename(filename) + msg
+            click.secho(error_msg, fg='red')
+            errors.append(error_msg)
+            new_contents = new_contents[1:]
+
     elif is_cpp(filename):
         formatter = 'legacy formatter'
 
