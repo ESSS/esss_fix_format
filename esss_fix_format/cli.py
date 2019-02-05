@@ -32,13 +32,19 @@ PATTERNS = {
 def is_cpp(filename):
     """Return True if the filename is of a type that should be treated as C++ source."""
     from fnmatch import fnmatch
-    return any(fnmatch(os.path.split(filename)[-1], p) for p in CPP_PATTERNS)
+    return any(fnmatch(os.path.basename(filename), p) for p in CPP_PATTERNS)
 
 
 def should_format(filename):
     """Return True if the filename is of a type that is supported by this tool."""
     from fnmatch import fnmatch
-    return any(fnmatch(os.path.split(filename)[-1], p) for p in PATTERNS)
+    filename_no_ext, ext = os.path.splitext(filename)
+    ipynb_filename = filename_no_ext + '.ipynb'
+    # ignore .py file that has a jupytext configured notebook with the same base name
+    if ext == '.py' and os.path.isfile(ipynb_filename):
+        with open(ipynb_filename) as f:
+            return not 'jupytext' in f.read()
+    return any(fnmatch(os.path.basename(filename), p) for p in PATTERNS)
 
 
 # caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the

@@ -20,7 +20,7 @@ test_requirements = [
 
 setup(
     name='esss_fix_format',
-    version='1.6.0',
+    version='1.8.0',
     description="ESSS code formatter and checker",
     long_description=readme + '\n\n' + changelog,
     author="ESSS",
