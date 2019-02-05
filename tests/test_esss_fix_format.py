@@ -221,7 +221,6 @@ def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_
     filename_py = tmpdir.join('test.py')
     filename_ipynb = tmpdir.join('test.ipynb')
 
-    # wrongly formatted, but should skip as a notebook with same base name exists
     filename_py.write(u'print( "Hello World" )', 'w')
     filename_ipynb.write(notebook_content, 'w')
 
