@@ -36,15 +36,21 @@ def is_cpp(filename):
 
 
 def should_format(filename):
-    """Return True if the filename is of a type that is supported by this tool."""
+    """
+    Return a tuple (fmt, reason) where fmt is True if the filename
+    is of a type that is supported by this tool.
+    """
     from fnmatch import fnmatch
     filename_no_ext, ext = os.path.splitext(filename)
     ipynb_filename = filename_no_ext + '.ipynb'
     # ignore .py file that has a jupytext configured notebook with the same base name
     if ext == '.py' and os.path.isfile(ipynb_filename):
         with open(ipynb_filename) as f:
-            return 'jupytext' not in f.read()
-    return any(fnmatch(os.path.basename(filename), p) for p in PATTERNS)
+            if 'jupytext' in f.read():
+                return False, 'Jupytext generated file'
+    if any(fnmatch(os.path.basename(filename), p) for p in PATTERNS):
+        return True, ''
+    return False, 'Unknown file type'
 
 
 # caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
@@ -161,8 +167,10 @@ def _process_file(filename, check, format_code):
     errors = []
     formatter = None
 
-    if not should_format(filename):
-        click.secho(click.format_filename(filename) + ': Unknown file type', fg='white')
+    fmt, reason = should_format(filename)
+
+    if not fmt:
+        click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
         return changed, errors, formatter
 
     if is_cpp(filename):
