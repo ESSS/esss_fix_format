@@ -43,7 +43,7 @@ def should_format(filename):
     # ignore .py file that has a jupytext configured notebook with the same base name
     if ext == '.py' and os.path.isfile(ipynb_filename):
         with open(ipynb_filename) as f:
-            return not ('jupytext' in f.read())
+            return 'jupytext' not in f.read()
     return any(fnmatch(os.path.basename(filename), p) for p in PATTERNS)
 
 
