@@ -35,5 +35,6 @@ PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyReturnTypeOnItsOwnLine: 200
 SpaceAfterCStyleCast: 'true'
 SpacesBeforeTrailingComments: '2'
+IndentPPDirectives: AfterHash
 
 ...
