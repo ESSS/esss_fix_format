@@ -221,7 +221,29 @@ def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_
     filename_py = tmpdir.join('test.py')
     filename_ipynb = tmpdir.join('test.ipynb')
 
-    filename_py.write(u'print( "Hello World" )', 'w')
+    py_content = textwrap.dedent('''\
+        # -*- coding: utf-8 -*-
+        # ---
+        # jupyter:
+        #   jupytext:
+        #     formats: ipynb,py:light
+        #     text_representation:
+        #       extension: .py
+        #       format_name: light
+        #       format_version: '1.3'
+        #       jupytext_version: 0.8.6
+        #   kernelspec:
+        #     display_name: Python 3
+        #     language: python
+        #     name: python3
+        # ---
+        import    matplotlib.pyplot   as plt
+    ''')
+
+    filename_py.write(
+        py_content,
+        'w'
+    )
     filename_ipynb.write(notebook_content, 'w')
 
     run([str(filename_py), '--check'], expected_exit=expected_exit)
