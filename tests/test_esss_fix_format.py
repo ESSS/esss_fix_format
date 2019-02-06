@@ -211,6 +211,44 @@ def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
     run([str(filename)], expected_exit=0)
 
 
+@pytest.mark.parametrize(
+    'notebook_content, expected_exit', [
+        (u'"jupytext": {"formats": "ipynb,py"}', 0),
+        (u'Not a j-u-p-y-t-e-x-t configured notebook', 1),
+    ]
+)
+def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_exit):
+    filename_py = tmpdir.join('test.py')
+    filename_ipynb = tmpdir.join('test.ipynb')
+
+    py_content = textwrap.dedent('''\
+        # -*- coding: utf-8 -*-
+        # ---
+        # jupyter:
+        #   jupytext:
+        #     formats: ipynb,py:light
+        #     text_representation:
+        #       extension: .py
+        #       format_name: light
+        #       format_version: '1.3'
+        #       jupytext_version: 0.8.6
+        #   kernelspec:
+        #     display_name: Python 3
+        #     language: python
+        #     name: python3
+        # ---
+        import    matplotlib.pyplot   as plt
+    ''')
+
+    filename_py.write(
+        py_content,
+        'w'
+    )
+    filename_ipynb.write(notebook_content, 'w')
+
+    run([str(filename_py), '--check'], expected_exit=expected_exit)
+
+
 @pytest.mark.parametrize('check', [True, False])
 def test_python_with_bom(tmpdir, sort_cfg_to_tmpdir, check):
     filename = tmpdir.join('test.py')
