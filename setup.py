@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -23,11 +20,8 @@ setup(
     author="ESSS",
     author_email='foss@esss.co',
     url='https://github.com/esss/esss_fix_format',
-    packages=[
-        'esss_fix_format',
-    ],
-    package_dir={'esss_fix_format':
-                 'esss_fix_format'},
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     entry_points={
         'console_scripts': [
             'fix-format=esss_fix_format.cli:main',
