@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import codecs
 import io
 import os
@@ -210,7 +209,7 @@ def _process_file(filename, check, format_code):
             try:
                 subprocess.check_output('clang-format -i "%s"' % filename, shell=True)
             except subprocess.CalledProcessError as e:
-                msg = ': ERROR (%s: %s): ' % (type(e).__name__, e)
+                msg = ': ERROR ({}: {}): '.format(type(e).__name__, e)
                 msg += 'Please check if "clang-format" is installed and accessible'
                 error_msg = click.format_filename(filename) + msg
                 click.secho(error_msg, fg='red')
@@ -233,7 +232,7 @@ def _process_file(filename, check, format_code):
             f.seek(0)
             original_contents = f.read()
         except UnicodeDecodeError as e:
-            msg = ': ERROR (%s: %s)' % (type(e).__name__, e)
+            msg = ': ERROR ({}: {})'.format(type(e).__name__, e)
             error_msg = click.format_filename(filename) + msg
             click.secho(error_msg, fg='red')
             errors.append(error_msg)
@@ -268,7 +267,7 @@ def _process_file(filename, check, format_code):
             # Pass code formatter.
             new_contents = format_code(new_contents)
         except Exception as e:
-            error_msg = 'Error formatting code: %s' % (e,)
+            error_msg = f'Error formatting code: {e}'
             click.secho(error_msg, fg='red')
             errors.append(error_msg)
 
@@ -398,12 +397,12 @@ def _peek_eol(line):
     :rtype: unicode
     :return: EOL used by line.
     """
-    eol = u'\n'
+    eol = '\n'
     if line:
-        if line.endswith(u'\r'):
-            eol = u'\r'
-        elif line.endswith(u'\r\n'):
-            eol = u'\r\n'
+        if line.endswith('\r'):
+            eol = '\r'
+        elif line.endswith('\r\n'):
+            eol = '\r\n'
     return eol
 
 

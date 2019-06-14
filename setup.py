@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -15,22 +12,16 @@ requirements = [
     'pydevf==0.1.5',
 ]
 
-test_requirements = [
-]
-
 setup(
     name='esss_fix_format',
-    version='1.8.0',
+    version='2.0.0',
     description="ESSS code formatter and checker",
     long_description=readme + '\n\n' + changelog,
     author="ESSS",
     author_email='foss@esss.co',
     url='https://github.com/esss/esss_fix_format',
-    packages=[
-        'esss_fix_format',
-    ],
-    package_dir={'esss_fix_format':
-                 'esss_fix_format'},
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     entry_points={
         'console_scripts': [
             'fix-format=esss_fix_format.cli:main',
@@ -43,18 +34,11 @@ setup(
     zip_safe=False,
     keywords='esss_fix_format',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    test_suite='tests',
-    tests_require=test_requirements
 )

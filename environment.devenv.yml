@@ -15,5 +15,10 @@ dependencies:
   - pygments>=2.2.0
   - pytest>=3.8.0
   - pytest-mock>=1.10.0
-  # restructuredtext_lint 1.1.3 has a problem in Windows
-  - restructuredtext_lint==1.0.1
+  - restructuredtext_lint
+
+environment:
+  PYTHONPATH:
+    - {{ root }}/src
+  PATH:
+    - {{ root }}/bin

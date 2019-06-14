@@ -133,17 +133,19 @@ Follow this steps to re format an entire project and start using the pre-commit 
 8. Profit!
 
 
-Developing (conda)
-------------------
+Developing
+----------
 
 Create a conda environent (using Python 3 here) and install it in development mode.
-Make sure you have conda configured to use ``conda-forge`` and ``esss`` conda channels.
+
+**Make sure you have conda configured to use ``conda-forge`` and ``esss`` conda channels.**
 
 .. code-block:: sh
 
     $ conda install -n base conda-devenv
     $ conda devenv
     $ source activate esss-fix-format-py36
+    $ fix-format --git-hooks
     $ pytest
 
 When implementing changes, please do it in a separate branch and open a PR.

@@ -1,28 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import abc
 import textwrap
 
 
-def with_metaclass(meta, *bases):  # Borrowed from six.
-    """Create a base class with a metaclass."""
-
-    # This requires a bit of explanation: the basic idea is to make a dummy
-    # metaclass for one level of class instantiation that replaces itself with
-    # the actual metaclass.
-    class metaclass(type):
-
-        def __new__(cls, name, this_bases, d):
-            return meta(name, bases, d)
-
-        @classmethod
-        def __prepare__(cls, name, this_bases):
-            return meta.__prepare__(name, bases)
-
-    return type.__new__(metaclass, str('temporary_class'), (), {})
-
-
-class GitHook(with_metaclass(abc.ABCMeta, object)):
+class GitHook(metaclass=abc.ABCMeta):
     """
     Base class to define a Git hook usable by `hooks` task.
     """
@@ -79,7 +59,7 @@ def _add_hook(hook):
     if name not in _HOOKS:
         _HOOKS[name] = hook
     else:
-        raise KeyError("A hook named '{}' already exists".format(name))
+        raise KeyError(f"A hook named '{name}' already exists")
 
 
 # All hooks available by default

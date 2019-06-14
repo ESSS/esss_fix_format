@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import codecs
 import io
 import os
@@ -197,7 +196,7 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
 def test_input_invalid_codec(tmpdir, sort_cfg_to_tmpdir):
     """Display error summary when we fail to open a file"""
     filename = tmpdir.join('test.py')
-    filename.write(u'hello world'.encode('UTF-16'), 'wb')
+    filename.write('hello world'.encode('UTF-16'), 'wb')
     output = run([str(filename)], expected_exit=1)
     output.fnmatch_lines(str(filename) + ': ERROR (Unicode*')
     output.fnmatch_lines('*== ERRORS ==*')
@@ -207,14 +206,14 @@ def test_input_invalid_codec(tmpdir, sort_cfg_to_tmpdir):
 def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
     """Ensure files with a single empty line do not raise an error"""
     filename = tmpdir.join('test.py')
-    filename.write(u'\r\n', 'w')
+    filename.write('\r\n', 'w')
     run([str(filename)], expected_exit=0)
 
 
 @pytest.mark.parametrize(
     'notebook_content, expected_exit', [
-        (u'"jupytext": {"formats": "ipynb,py"}', 0),
-        (u'Not a j-u-p-y-t-e-x-t configured notebook', 1),
+        ('"jupytext": {"formats": "ipynb,py"}', 0),
+        ('Not a j-u-p-y-t-e-x-t configured notebook', 1),
     ]
 )
 def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_exit):
@@ -361,9 +360,8 @@ def test_no_isort_cfg(tmpdir):
         for p in tmpdir.parts():
             isort_cfg_file = p.join('.isort.cfg')
             if isort_cfg_file.exists():
-                raise AssertionError(
-                    "Test does not expect that .isort.cfg is in one of the tmpdir parents (%s)" % (
-                        isort_cfg_file,))
+                msg = "Test does not expect that .isort.cfg is in one of the tmpdir parents ({})"
+                raise AssertionError(msg.format(isort_cfg_file))
         raise
     output.fnmatch_lines(
         r'*ERROR .isort.cfg not available in repository (or line_length config < 80).')
@@ -424,7 +422,7 @@ def test_missing_bom_error_for_non_ascii_cpp(tmpdir):
     '''
     Throws an error for not encoding with "UTF-8 with BOM" of non-ascii cpp file.
     '''
-    source = u'int     ŢōŶ;   '
+    source = 'int     ŢōŶ;   '
     filename = tmpdir.join('a.cpp')
     filename.write_text(source, encoding='UTF-8')
     output = run([str(filename)], expected_exit=1)
@@ -439,14 +437,14 @@ def test_bom_encoded_for_non_ascii_cpp(tmpdir, dot_clang_format_to_tmpdir):
     '''
     Formats non-ascii cpp as usual, if it has 'UTF-8 encoding with BOM'
     '''
-    source = u'int     ŢōŶ;   '
+    source = 'int     ŢōŶ;   '
     filename = tmpdir.join('a.cpp')
     filename.write_text(source, encoding='UTF-8-SIG')
     check_invalid_file(filename, formatter='clang-format')
     fix_invalid_file(filename, formatter='clang-format')
     check_valid_file(filename, formatter='clang-format')
     obtained = filename.read_text('UTF-8-SIG')
-    assert obtained == u'int ŢōŶ;'
+    assert obtained == 'int ŢōŶ;'
 
 
 def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmpdir):
