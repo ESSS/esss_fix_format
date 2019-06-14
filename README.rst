@@ -145,6 +145,7 @@ Create a conda environent (using Python 3 here) and install it in development mo
     $ conda install -n base conda-devenv
     $ conda devenv
     $ source activate esss-fix-format-py36
+    $ fix-format --git-hooks
     $ pytest
 
 When implementing changes, please do it in a separate branch and open a PR.

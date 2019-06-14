@@ -21,3 +21,5 @@ dependencies:
 environment:
   PYTHONPATH:
     - {{ root }}/src
+  PATH:
+    - {{ root }}/bin
