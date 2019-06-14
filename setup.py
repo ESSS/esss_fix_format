@@ -7,6 +7,7 @@ with open('CHANGELOG.rst') as changelog_file:
     changelog = changelog_file.read()
 
 requirements = [
+    'black',
     'click>=6.0',
     'isort',
     'pydevf==0.1.5',

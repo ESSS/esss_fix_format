@@ -51,6 +51,24 @@ Use ``fix-format`` (or ``ff`` for short) to reorder imports and format source co
     ff -c
 
 
+Black
+^^^^^
+
+Since version ``2.0.0`` it is possible to use `black <https://github.com/python/black>`__ as the
+code formatter for Python code.
+
+``fix-format`` will use ``black`` automatically if it finds a ``pyproject.toml`` with a ``[tool.black]`` section in an
+ancestor directories of the filenames passed on the command-line.
+
+Here's a sample ``pyproject.toml`` file:
+
+.. code-block:: toml
+
+    [tool.black]
+    skip-string-normalization = true
+    line-length = 100
+
+
 Migrating a project to use fix-format
 -------------------------------------
 

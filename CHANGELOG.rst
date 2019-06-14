@@ -7,6 +7,11 @@ History
 
 * ``fix-format`` now only supports Python 3.6+.
 
+* ``fix-format`` can now run `black <https://github.com/python/black>`__ as the
+  code formatter for Python code.
+
+  See ``README.rst`` for instructions on how to use it.
+
 1.8.0
 ----------
 

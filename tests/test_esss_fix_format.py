@@ -557,3 +557,56 @@ def check_invalid_file(input_file, formatter=None):
     output.fnmatch_lines(str(input_file) + ': Failed' + _get_formatter_msg(formatter))
     output.fnmatch_lines('*== failed checks ==*')
     output.fnmatch_lines(str(input_file))
+
+
+def test_find_black_config(tmp_path):
+    (tmp_path / 'pA/p2/p3').mkdir(parents=True)
+    (tmp_path / 'pA/p2/p3/foo.py').touch()
+    (tmp_path / 'pA/p2/p3/pyproject.toml').touch()
+    (tmp_path / 'pX/p9').mkdir(parents=True)
+    (tmp_path / 'pX/p9/pyproject.toml').touch()
+
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3']) is None
+    assert cli.find_black_config([tmp_path]) is None
+    assert cli.find_black_config([]) is None
+
+    (tmp_path / 'pX/p9/pyproject.toml').write_text('[tool.black]')
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
+    assert cli.find_black_config([tmp_path / 'pX/p9']) == tmp_path / 'pX/p9/pyproject.toml'
+
+    root_toml = tmp_path / 'pyproject.toml'
+    (root_toml).write_text('[tool.black]')
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) == root_toml
+
+
+def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
+    (tmp_path / 'pyproject.toml').write_text('[tool.black]')
+    input_source = (
+        'import six\n'
+        'import os\n'
+        'x = [1,\n'
+        '   2,\n'
+        '  3]\n'
+        '\n'
+        '\n'
+        '\n'
+    )
+    fn = tmp_path / 'foo.py'
+    fn.write_text(input_source)
+    output = run(['--check', str(fn)], expected_exit=1)
+    output.fnmatch_lines('Checking black...')
+    obtained = fn.read_text()
+    assert obtained == input_source
+
+    for i in range(2):
+        output = run([str(fn)], expected_exit=0)
+        output.fnmatch_lines('Running black...')
+        obtained = fn.read_text()
+        assert obtained == (
+            'import os\n'
+            '\n'
+            'import six\n'
+            '\n'
+            'x = [1, 2, 3]\n'
+        )
