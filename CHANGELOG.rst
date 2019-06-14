@@ -2,6 +2,11 @@
 History
 =======
 
+2.0.0 (unreleased)
+------------------
+
+* ``fix-format`` now only supports Python 3.6+.
+
 1.8.0
 ----------
 

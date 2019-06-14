@@ -133,11 +133,12 @@ Follow this steps to re format an entire project and start using the pre-commit 
 8. Profit!
 
 
-Developing (conda)
-------------------
+Developing
+----------
 
 Create a conda environent (using Python 3 here) and install it in development mode.
-Make sure you have conda configured to use ``conda-forge`` and ``esss`` conda channels.
+
+**Make sure you have conda configured to use ``conda-forge`` and ``esss`` conda channels.**
 
 .. code-block:: sh
 

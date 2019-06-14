@@ -15,12 +15,9 @@ requirements = [
     'pydevf==0.1.5',
 ]
 
-test_requirements = [
-]
-
 setup(
     name='esss_fix_format',
-    version='1.8.0',
+    version='2.0.0',
     description="ESSS code formatter and checker",
     long_description=readme + '\n\n' + changelog,
     author="ESSS",
@@ -43,18 +40,11 @@ setup(
     zip_safe=False,
     keywords='esss_fix_format',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    test_suite='tests',
-    tests_require=test_requirements
 )
