@@ -15,7 +15,7 @@ Simple code formatter and pre-commit checker used internally by ESSS.
 * Imports sorted using `isort <https://pypi.python.org/pypi/isort>`_
 * Trim right spaces
 * Expand tabs
-* Formats Python code using `PyDev Code Formatter <https://github.com/fabioz/PyDev.Formatter>`_
+* Formats Python code using `PyDev Code Formatter <https://github.com/fabioz/PyDev.Formatter>`_ or `black <https://github.com/python/black>`__
 * Formats C++ code using `clang-format <https://clang.llvm.org/docs/ClangFormat.html>`_ if a ``.clang-format`` file is available
 
 
@@ -28,8 +28,8 @@ Install
 
 Note:
 
-If executed from the root environment (or another environment) isort could classify wrongly some modules,
-so, you should install and run it from the same environment you're using for your project.
+If executed from the root environment (or another environment) isort will classify modules incorrectly,
+so you should install and run it from the same environment you're using for your project.
 
 
 Usage
@@ -119,7 +119,10 @@ Follow this steps to re format an entire project and start using the pre-commit 
         $ cd /path/to/repo/root
         $ curl -O https://raw.githubusercontent.com/ESSS/esss_fix_format/master/.clang-format
 
-5. Execute:
+5. If you want to use ``black`` to format Python code, add a ``pyproject.toml`` to the root of
+   your repository; an example can be found above.
+
+6. Execute:
 
     .. code-block:: sh
 
@@ -143,12 +146,12 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
         $ git commit -anm "Apply fix-format on all files" --author="fix-format"
 
-6. Push and run your branch on CI.
+7. Push and run your branch on CI.
 
-7. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
+8. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
    that any commit will be checked locally before commiting.
 
-8. Profit!
+9. Profit! 💰
 
 
 Developing
