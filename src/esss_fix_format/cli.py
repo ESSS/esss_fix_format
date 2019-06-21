@@ -318,11 +318,15 @@ def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
     Black's output is shown directly to the user, so even in events of errors it is
     expected that the users sees the error directly.
 
-    :return: a pair (formatted, error)
+    We need this function to work differently than the rest of ``esss_fix_format`` (which processes
+    each file individually) because we want to call black only once, reformatting all files
+    given to it in the command-line.
+
+    :return: a pair (would_be_formatted, black_failed)
     """
     py_files = [x for x in files if x.suffix == '.py']
-    error = False
-    formatted = False
+    black_failed = False
+    would_be_formatted = False
     if py_files:
         if check:
             click.secho('Checking black...', fg='cyan')
@@ -333,10 +337,10 @@ def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
             args.append('--check')
         args.extend(str(x) for x in py_files)
         status = subprocess.call(args)
-        error = not check and status != 0
-        formatted = check and status == 1
+        black_failed = not check and status != 0
+        would_be_formatted = check and status == 1
 
-    return formatted, error
+    return would_be_formatted, black_failed
 
 
 def _main(files_or_directories, check, stdin, commit, pydevf_format_func):
@@ -357,12 +361,12 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func):
     errors = []
 
     black_config = find_black_config(files)
-    formatted_by_black = False
+    would_be_formatted = False
     if black_config:
         # skip pydevf formatter
         pydevf_format_func = None
-        formatted_by_black, error = run_black_on_python_files(files, check)
-        if error:
+        would_be_formatted, black_failed = run_black_on_python_files(files, check)
+        if black_failed:
             errors.append('Error formatting black (see console)')
 
     changed_files = []
@@ -390,7 +394,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func):
         for error_msg in errors:
             click.secho(error_msg, fg='red')
         sys.exit(1)
-    if check and (changed_files or formatted_by_black):
+    if check and (changed_files or would_be_formatted):
         click.secho('')
         click.secho(banner('failed checks'), fg='yellow')
         for filename in changed_files:
