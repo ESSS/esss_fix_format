@@ -147,7 +147,9 @@ def _wait_current_processes():
               help='Use modified files from git.')
 @click.option('--git-hooks', default=False, is_flag=True,
               help='Add git pre-commit hooks to the repo in the current dir.')
-def main(files_or_directories, check, stdin, commit, git_hooks):
+@click.option('-v', '--verbose', default=False, is_flag=True,
+              help='Show skipped files in the output')
+def main(files_or_directories, check, stdin, commit, git_hooks, verbose):
     """Fixes and checks formatting according to ESSS standards."""
 
     if git_hooks:
@@ -168,14 +170,14 @@ def main(files_or_directories, check, stdin, commit, git_hooks):
         return pydevf.format_code_server(formatter[0], code_to_format)
 
     try:
-        return _main(files_or_directories, check, stdin, commit, format_code)
+        return _main(files_or_directories, check, stdin, commit, format_code, verbose=verbose)
     finally:
         if formatter:
             # Stop pydevf if needed.
             pydevf.stop_format_server(formatter[0])
 
 
-def _process_file(filename, check, format_code):
+def _process_file(filename, check, format_code, *, verbose):
     '''
     :returns: a tuple with (changed, errors, formatter):
         - `changed` is a boolean, True if the file was changed
@@ -188,12 +190,6 @@ def _process_file(filename, check, format_code):
     changed = False
     errors = []
     formatter = None
-
-    fmt, reason = should_format(filename)
-
-    if not fmt:
-        click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
-        return changed, errors, formatter
 
     if is_cpp(filename):
         with io.open(filename, 'rb') as f:
@@ -343,7 +339,7 @@ def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
     return would_be_formatted, black_failed
 
 
-def _main(files_or_directories, check, stdin, commit, pydevf_format_func):
+def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, verbose):
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
     elif commit:
@@ -372,14 +368,20 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func):
     changed_files = []
     for filename in files:
         filename = str(filename)
-        changed, new_errors, formatter = _process_file(filename, check, pydevf_format_func)
+        fmt, reason = should_format(filename)
+        if not fmt:
+            if verbose:
+                click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
+            continue
+        changed, new_errors, formatter = _process_file(filename, check, pydevf_format_func, verbose=verbose)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
-        msg = click.format_filename(filename) + ': ' + status
-        if formatter is not None:
-            msg += ' (' + formatter + ')'
+        if status:
+            msg = click.format_filename(filename) + ': ' + status
+            if formatter is not None:
+                msg += ' (' + formatter + ')'
         click.secho(msg, fg=color)
 
     def banner(caption):

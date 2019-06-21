@@ -153,14 +153,27 @@ def test_imports(tmpdir, sort_cfg_to_tmpdir):
     assert filename.read('r') == expected
 
 
-def test_unknown_extension(input_file):
+@pytest.mark.parametrize('verbose', [True, False])
+def test_unknown_extension(input_file, verbose):
     new_filename = py.path.local(os.path.splitext(str(input_file))[0] + '.unknown')
     input_file.move(new_filename)
-    output = run(['--check', str(new_filename)], expected_exit=0)
-    output.fnmatch_lines(str(new_filename) + ': Unknown file type')
+    args = ['--check', str(new_filename)]
+    if verbose:
+        args.append('--verbose')
+    output = run(args, expected_exit=0)
+    if verbose:
+        output.fnmatch_lines(str(new_filename) + ': Unknown file type')
+    else:
+        assert output.str() == ''
 
-    output = run([str(new_filename)], expected_exit=0)
-    output.fnmatch_lines(str(new_filename) + ': Unknown file type')
+    args = [str(new_filename)]
+    if verbose:
+        args.append('--verbose')
+    output = run(args, expected_exit=0)
+    if verbose:
+        output.fnmatch_lines(str(new_filename) + ': Unknown file type')
+    else:
+        assert output.str() == ''
 
 
 def test_filename_without_wildcard(tmpdir, sort_cfg_to_tmpdir):

@@ -12,6 +12,9 @@ History
 
   See ``README.rst`` for instructions on how to use it.
 
+* New ``--verbose`` flag (defaults to False) which when given will show unknown files. Previously
+  unknown files were always shown, this reduces the verbosity of output.
+
 1.8.0
 ----------
 
