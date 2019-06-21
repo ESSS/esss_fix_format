@@ -46,11 +46,11 @@ def should_format(filename):
     ipynb_filename = filename_no_ext + '.ipynb'
     # ignore .py file that has a jupytext configured notebook with the same base name
     if ext == '.py' and os.path.isfile(ipynb_filename):
-        with open(ipynb_filename) as f:
-            if 'jupytext' not in f.read():
+        with open(ipynb_filename, 'rb') as f:
+            if b'jupytext' not in f.read():
                 return True, ''
-        with open(filename) as f:
-            if 'jupytext:' not in f.read():
+        with open(filename, 'rb') as f:
+            if b'jupytext:' not in f.read():
                 return True, ''
         return False, 'Jupytext generated file'
     if any(fnmatch(os.path.basename(filename), p) for p in PATTERNS):

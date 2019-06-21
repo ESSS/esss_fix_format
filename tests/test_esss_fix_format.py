@@ -212,7 +212,7 @@ def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
 
 @pytest.mark.parametrize(
     'notebook_content, expected_exit', [
-        ('"jupytext": {"formats": "ipynb,py"}', 0),
+        ('"jupytext": {"formats": "ipynb,py"} ”', 0),
         ('Not a j-u-p-y-t-e-x-t configured notebook', 1),
     ]
 )
@@ -236,14 +236,12 @@ def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_
         #     language: python
         #     name: python3
         # ---
+        # ”
         import    matplotlib.pyplot   as plt
     ''')
 
-    filename_py.write(
-        py_content,
-        'w'
-    )
-    filename_ipynb.write(notebook_content, 'w')
+    filename_py.write_text(py_content, 'UTF-8')
+    filename_ipynb.write_text(notebook_content, 'UTF-8')
 
     run([str(filename_py), '--check'], expected_exit=expected_exit)
 
