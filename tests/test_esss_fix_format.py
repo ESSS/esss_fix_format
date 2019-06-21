@@ -595,13 +595,13 @@ def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
     fn = tmp_path / 'foo.py'
     fn.write_text(input_source)
     output = run(['--check', str(fn)], expected_exit=1)
-    output.fnmatch_lines('Checking black...')
+    output.fnmatch_lines('Checking black on 1 files...')
     obtained = fn.read_text()
     assert obtained == input_source
 
     for i in range(2):
         output = run([str(fn)], expected_exit=0)
-        output.fnmatch_lines('Running black...')
+        output.fnmatch_lines('Running black on 1 files...')
         obtained = fn.read_text()
         assert obtained == (
             'import os\n'

@@ -329,9 +329,9 @@ def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
     would_be_formatted = False
     if py_files:
         if check:
-            click.secho('Checking black...', fg='cyan')
+            click.secho(f'Checking black on {len(files)} files...', fg='cyan')
         else:
-            click.secho('Running black...', fg='cyan')
+            click.secho(f'Running black on {len(files)} files...', fg='cyan')
         args = ['black']
         if check:
             args.append('--check')
