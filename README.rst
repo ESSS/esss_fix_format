@@ -122,7 +122,13 @@ Follow this steps to re format an entire project and start using the pre-commit 
 5. If you want to use ``black`` to format Python code, add a ``pyproject.toml`` to the root of
    your repository; an example can be found above.
 
-6. Execute:
+6. Activate your project environment:
+
+    .. code-block:: sh
+
+            $ conda activate myproject-py36
+
+7. Execute:
 
     .. code-block:: sh
 
@@ -146,12 +152,12 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
         $ git commit -anm "Apply fix-format on all files" --author="fix-format"
 
-7. Push and run your branch on CI.
+8. Push and run your branch on CI.
 
-8. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
+9. If all goes well, it's possible to install pre-commit hooks by using ``ff --git-hooks`` so
    that any commit will be checked locally before commiting.
 
-9. Profit! 💰
+10. Profit! 💰
 
 
 Developing
