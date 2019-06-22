@@ -320,14 +320,14 @@ def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
 
     :return: a pair (would_be_formatted, black_failed)
     """
-    py_files = [x for x in files if x.suffix == '.py']
+    py_files = [x for x in files if x.suffix == '.py' and should_format(str(x))[0]]
     black_failed = False
     would_be_formatted = False
     if py_files:
         if check:
-            click.secho(f'Checking black on {len(files)} files...', fg='cyan')
+            click.secho(f'Checking black on {len(py_files)} files...', fg='cyan')
         else:
-            click.secho(f'Running black on {len(files)} files...', fg='cyan')
+            click.secho(f'Running black on {len(py_files)} files...', fg='cyan')
         args = ['black']
         if check:
             args.append('--check')
@@ -373,7 +373,8 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
             if verbose:
                 click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
             continue
-        changed, new_errors, formatter = _process_file(filename, check, pydevf_format_func, verbose=verbose)
+        changed, new_errors, formatter = _process_file(filename, check, pydevf_format_func,
+                                                       verbose=verbose)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)

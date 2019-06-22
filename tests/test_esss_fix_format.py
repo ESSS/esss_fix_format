@@ -227,12 +227,19 @@ def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
     'notebook_content, expected_exit', [
         ('"jupytext": {"formats": "ipynb,py"} ”', 0),
         ('Not a j-u-p-y-t-e-x-t configured notebook', 1),
+        (None, 1),
     ]
 )
-def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_exit):
-    filename_py = tmpdir.join('test.py')
-    filename_ipynb = tmpdir.join('test.ipynb')
+@pytest.mark.parametrize('formatter', ['pydev', 'black'])
+def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_exit, formatter):
+    if formatter == 'black':
+        tmpdir.join('pyproject.toml').write_text('[tool.black]', 'UTF-8')
 
+    if notebook_content is not None:
+        filename_ipynb = tmpdir.join('test.ipynb')
+        filename_ipynb.write_text(notebook_content, 'UTF-8')
+
+    filename_py = tmpdir.join('test.py')
     py_content = textwrap.dedent('''\
         # -*- coding: utf-8 -*-
         # ---
@@ -252,11 +259,20 @@ def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_
         # ”
         import    matplotlib.pyplot   as plt
     ''')
-
     filename_py.write_text(py_content, 'UTF-8')
-    filename_ipynb.write_text(notebook_content, 'UTF-8')
 
-    run([str(filename_py), '--check'], expected_exit=expected_exit)
+    output = run([str(filename_py), '--check'], expected_exit=expected_exit)
+    if formatter == 'black':
+        if expected_exit == 0:
+            assert output.str() == ''
+        else:
+            output.fnmatch_lines(['*test.py: Failed'])
+    else:
+        assert formatter == 'pydev'
+        if expected_exit == 0:
+            assert output.str() == ''
+        else:
+            output.fnmatch_lines(['*test.py: Failed'])
 
 
 @pytest.mark.parametrize('check', [True, False])
@@ -603,17 +619,26 @@ def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
         '\n'
         '\n'
     )
-    fn = tmp_path / 'foo.py'
-    fn.write_text(input_source)
-    output = run(['--check', str(fn)], expected_exit=1)
-    output.fnmatch_lines('Checking black on 1 files...')
-    obtained = fn.read_text()
+    py_file = tmp_path / 'foo.py'
+    py_file.write_text(input_source)
+
+    # also write a cpp file to ensure black doesn't try to touch it
+    input_cpp = (
+        'namespace boost {};'
+    )
+    cpp_file = tmp_path / 'foo.cpp'
+    cpp_file.write_text(input_cpp)
+
+    output = run(['--check', str(tmp_path)], expected_exit=1)
+    output.fnmatch_lines(['Checking black on 1 files...',
+                          '*foo.cpp: OK*'])
+    obtained = py_file.read_text()
     assert obtained == input_source
 
     for i in range(2):
-        output = run([str(fn)], expected_exit=0)
+        output = run([str(tmp_path)], expected_exit=0)
         output.fnmatch_lines('Running black on 1 files...')
-        obtained = fn.read_text()
+        obtained = py_file.read_text()
         assert obtained == (
             'import os\n'
             '\n'
@@ -621,3 +646,4 @@ def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
             '\n'
             'x = [1, 2, 3]\n'
         )
+
