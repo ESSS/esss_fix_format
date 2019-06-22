@@ -51,6 +51,8 @@ Use ``fix-format`` (or ``ff`` for short) to reorder imports and format source co
     ff -c
 
 
+.. _black:
+
 Black
 ^^^^^
 
@@ -60,13 +62,7 @@ code formatter for Python code.
 ``fix-format`` will use ``black`` automatically if it finds a ``pyproject.toml`` with a ``[tool.black]`` section in an
 ancestor directories of the filenames passed on the command-line.
 
-Here's a sample ``pyproject.toml`` file:
-
-.. code-block:: toml
-
-    [tool.black]
-    skip-string-normalization = true
-    line-length = 100
+See "Converting master to black" below for details.
 
 
 Migrating a project to use fix-format
@@ -158,6 +154,110 @@ Follow this steps to re format an entire project and start using the pre-commit 
    that any commit will be checked locally before commiting.
 
 10. Profit! 💰
+
+Migrating from PyDev formatter to black
+---------------------------------------
+
+Migrating an existing code base from a formatter to another can be a bit of pain. This steps will
+help you diminish that pain as much as possible.
+
+
+Converting ``master`` to black
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The first step is converting your ``master`` branch to black.
+
+1. Add a ``pyproject.toml`` project with this contents:
+
+   .. code-block:: toml
+
+      [tool.black]
+      line-length = 100
+      skip-string-normalization = true
+
+2. You should have a ``.isort.cfg`` file with the same contents as one in the root of this repository, add those lines:
+
+   .. code-block:: ini
+
+      multi_line_output=3
+      include_trailing_comma=True
+      force_grid_wrap=0
+
+
+5. Commit, and save the commit hash, possible in a task that you created for this conversion:
+
+   .. code-block:: sh
+
+      $ git commit -anm "Add configuration files for black"
+
+
+3. Execute on the root of the repository:
+
+   .. code-block:: sh
+
+      $ fix-format .
+
+4. Ensure everything is fine:
+
+   .. code-block:: sh
+
+      $ fix-format --check .
+
+   If you **don't** see a message **"failed checks"**, it means everything is formatted correctly.
+
+5. Commit and then open a PR:
+
+   .. code-block:: sh
+
+      $ git commit -anm "Convert source files to black" --author="fix-format"
+
+
+Porting an existing branch to black
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Here we are in the situation where the ``master`` is already blacken, and you want
+to update your branch. There are two ways, and which way generates less conflicts really
+depends on the contents of the source branch.
+
+merge -> Fix format
+'''''''''''''''''''
+
+1. Merge with the target branch, resolve any conflicts and then commit normally.
+
+2. Execute ``fix-format`` in the root of your repository:
+
+   .. code-block:: sh
+
+       $ fix-format .
+
+   This should only change the files you have touched in your branch.
+
+3. Commit and push:
+
+   .. code-block:: sh
+
+     $ git commit -anm "Convert source files to black" --author="fix-format"
+
+
+Fix format -> merge
+'''''''''''''''''''
+
+1. Cherry-pick the commit you saved earlier on top of your branch.
+
+2. Execute ``fix-format`` in the root of your repository:
+
+   .. code-block:: sh
+
+       $ fix-format .
+
+   (In very large repositories, this will be a problem on Windows because of the command-line size, do it
+   in chunks).
+
+3. Fix any conflicts and then commit:
+
+   .. code-block:: sh
+
+     $ git commit -anm "Convert source files to black" --author="fix-format"
 
 
 Developing
