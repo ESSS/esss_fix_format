@@ -646,4 +646,3 @@ def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
             '\n'
             'x = [1, 2, 3]\n'
         )
-
