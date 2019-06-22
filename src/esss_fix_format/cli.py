@@ -307,7 +307,7 @@ def _process_file(filename, check, format_code, *, verbose):
     return changed, errors, formatter
 
 
-def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
+def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
     """
     Runs black on the given files (checking or formatting).
 
@@ -331,6 +331,8 @@ def run_black_on_python_files(files, check) -> Tuple[bool, bool]:
         args = ['black']
         if check:
             args.append('--check')
+        if verbose:
+            args.append('--verbose')
         args.extend(str(x) for x in py_files)
         status = subprocess.call(args)
         black_failed = not check and status != 0
@@ -353,7 +355,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
             else:
                 files.append(file_or_dir)
 
-    files = [Path(x) for x in files]
+    files = sorted(Path(x) for x in files)
     errors = []
 
     black_config = find_black_config(files)
@@ -361,11 +363,12 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     if black_config:
         # skip pydevf formatter
         pydevf_format_func = None
-        would_be_formatted, black_failed = run_black_on_python_files(files, check)
+        would_be_formatted, black_failed = run_black_on_python_files(files, check, verbose)
         if black_failed:
             errors.append('Error formatting black (see console)')
 
     changed_files = []
+    analysed_files = []
     for filename in files:
         filename = str(filename)
         fmt, reason = should_format(filename)
@@ -373,17 +376,19 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
             if verbose:
                 click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
             continue
+
+        analysed_files.append(filename)
         changed, new_errors, formatter = _process_file(filename, check, pydevf_format_func,
                                                        verbose=verbose)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
-        if status:
+        if changed or verbose:
             msg = click.format_filename(filename) + ': ' + status
             if formatter is not None:
                 msg += ' (' + formatter + ')'
-        click.secho(msg, fg=color)
+            click.secho(msg, fg=color)
 
     def banner(caption):
         caption = ' %s ' % caption
@@ -397,11 +402,17 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
         for error_msg in errors:
             click.secho(error_msg, fg='red')
         sys.exit(1)
+
+    # show a summary of what has been done
+    verb = 'would be ' if check else ''
+    if changed_files:
+        first_sentence = f'{len(changed_files)} files {verb}changed, '
+    else:
+        first_sentence = ''
+    click.secho(f'fix-format: {first_sentence}'
+                f'{len(analysed_files) - len(changed_files)} files {verb}left unchanged.', bold=True, fg='green')
+
     if check and (changed_files or would_be_formatted):
-        click.secho('')
-        click.secho(banner('failed checks'), fg='yellow')
-        for filename in changed_files:
-            click.secho(filename, fg='yellow')
         sys.exit(1)
 
 

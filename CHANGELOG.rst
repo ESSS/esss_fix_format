@@ -12,8 +12,8 @@ History
 
   See ``README.rst`` for instructions on how to use it.
 
-* New ``--verbose`` flag (defaults to False) which when given will show unknown files. Previously
-  unknown files were always shown, this reduces the verbosity of output.
+* By default ``fix-format`` is now less chatty, showing only files that were/would be changed and a summary
+  at the end, unless the new ``--verbose`` flag is given.
 
 1.8.0
 ----------
