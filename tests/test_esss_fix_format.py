@@ -703,3 +703,34 @@ def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
             '\n'
             'x = [1, 2, 3]\n'
         )
+
+
+def test_skip_git_directory(input_file, tmp_path):
+    (tmp_path / '.git').mkdir()
+    (tmp_path / '.git/dummy.py').touch()
+    (tmp_path / '.git/dummy.cpp').touch()
+
+    output = run([str(tmp_path)], expected_exit=0)
+    output.fnmatch_lines(['fix-format: 1 files changed, 0 files left unchanged.'])
+
+
+def test_black_operates_on_chunks(tmp_path, mocker, sort_cfg_to_tmpdir):
+    """Ensure black is being called in chunks of at most 100 files.
+
+    On Windows there's a limit on command-line size, so we call black in chunks there. This should
+    only happen on converting entire repositories, not in day to day use.
+    """
+    (tmp_path / 'pyproject.toml').write_text('[tool.black]')
+    for i in range(521):
+        (tmp_path / f'{i:03}_foo.py').touch()
+
+    return_codes = [1, 0, 1, 0, 1, 0]  # make black return failures in some batches
+    mocker.patch.object(subprocess, 'call', autospec=True, side_effect=return_codes)
+    output = run([str(tmp_path), '--check'], expected_exit=1)
+    output.fnmatch_lines([
+        'Checking black on 521 files...',
+        'fix-format: 521 files would be left unchanged.'
+    ])
+    call_list = subprocess.call.call_args_list
+    assert len(call_list) == 6  # 521 files in batches of 100
+>>>>>>> ea6c4ac... Fix failing test

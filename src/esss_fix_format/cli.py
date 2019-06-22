@@ -29,6 +29,11 @@ PATTERNS = {
     '*.cmake',
 }.union(CPP_PATTERNS)
 
+SKIP_DIRS = {
+    '.git',
+    '.hg',
+}
+
 
 def is_cpp(filename):
     """Return True if the filename is of a type that should be treated as C++ source."""
@@ -351,6 +356,9 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
         for file_or_dir in files_or_directories:
             if os.path.isdir(file_or_dir):
                 for root, dirs, names in os.walk(file_or_dir):
+                    for dirname in list(dirs):
+                        if dirname in SKIP_DIRS:
+                            dirs.remove(dirname)
                     files.extend(os.path.join(root, n) for n in names if should_format(n))
             else:
                 files.append(file_or_dir)
