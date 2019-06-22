@@ -7,7 +7,6 @@ import sys
 import textwrap
 
 import mock
-import py
 import pytest
 from click.testing import CliRunner
 
@@ -733,4 +732,3 @@ def test_black_operates_on_chunks(tmp_path, mocker, sort_cfg_to_tmpdir):
     ])
     call_list = subprocess.call.call_args_list
     assert len(call_list) == 6  # 521 files in batches of 100
->>>>>>> ea6c4ac... Fix failing test

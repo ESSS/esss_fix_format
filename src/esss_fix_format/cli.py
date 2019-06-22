@@ -6,6 +6,7 @@ import subprocess
 import sys
 from typing import Optional, Tuple
 
+import boltons.iterutils
 import click
 import pydevf
 from pathlib import Path
@@ -333,15 +334,22 @@ def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
             click.secho(f'Checking black on {len(py_files)} files...', fg='cyan')
         else:
             click.secho(f'Running black on {len(py_files)} files...', fg='cyan')
-        args = ['black']
-        if check:
-            args.append('--check')
-        if verbose:
-            args.append('--verbose')
-        args.extend(str(x) for x in py_files)
-        status = subprocess.call(args)
-        black_failed = not check and status != 0
-        would_be_formatted = check and status == 1
+        # on Windows there's a limit on the command-line size, so we call black in batches
+        # this should only be an issue when executing fix-format over the entire repository,
+        # not on day to day usage
+        chunk_size = 100
+        for chunked_files in boltons.iterutils.chunked(py_files, chunk_size):
+            args = ['black']
+            if check:
+                args.append('--check')
+            if verbose:
+                args.append('--verbose')
+            args.extend(str(x) for x in chunked_files)
+            status = subprocess.call(args)
+            if not black_failed:
+                black_failed = not check and status != 0
+            if not would_be_formatted:
+                would_be_formatted = check and status == 1
 
     return would_be_formatted, black_failed
 
@@ -418,7 +426,8 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     else:
         first_sentence = ''
     click.secho(f'fix-format: {first_sentence}'
-                f'{len(analysed_files) - len(changed_files)} files {verb}left unchanged.', bold=True, fg='green')
+                f'{len(analysed_files) - len(changed_files)} files {verb}left unchanged.',
+                bold=True, fg='green')
 
     if check and (changed_files or would_be_formatted):
         sys.exit(1)
