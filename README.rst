@@ -116,7 +116,7 @@ Follow this steps to re format an entire project and start using the pre-commit 
         $ curl -O https://raw.githubusercontent.com/ESSS/esss_fix_format/master/.clang-format
 
 5. If you want to use ``black`` to format Python code, add a ``pyproject.toml`` to the root of
-   your repository; an example can be found above.
+   your repository; an example can be found in "Converting master to black" below.
 
 6. Activate your project environment:
 
@@ -175,7 +175,8 @@ The first step is converting your ``master`` branch to black.
       line-length = 100
       skip-string-normalization = true
 
-2. You should have a ``.isort.cfg`` file with the same contents as one in the root of this repository, add those lines:
+2. Your root directory should have a ``.isort.cfg`` file with the same contents as one in the root of this
+   repository, add those lines:
 
    .. code-block:: ini
 
@@ -203,7 +204,7 @@ The first step is converting your ``master`` branch to black.
 
       $ fix-format --check .
 
-   If you **don't** see a message **"failed checks"**, it means everything is formatted correctly.
+   If you **don't** see any "reformatting" messages, it means everything is formatted correctly.
 
 5. Commit and then open a PR:
 
