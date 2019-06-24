@@ -7,7 +7,6 @@ import sys
 import textwrap
 
 import mock
-import py
 import pytest
 from click.testing import CliRunner
 
@@ -90,9 +89,12 @@ def test_directory_command_line(input_file, tmpdir):
     another_file = tmpdir.join('subdir', 'test2.py').ensure(file=1)
     input_file.copy(another_file)
 
-    output = run([str(tmpdir)], expected_exit=0)
-    output.fnmatch_lines(str(input_file) + ': Fixed')
-    output.fnmatch_lines(str(another_file) + ': Fixed')
+    output = run([str(tmpdir), '--verbose'], expected_exit=0)
+    output.fnmatch_lines([
+        str(another_file) + ': Fixed',
+        str(input_file) + ': Fixed',
+        'fix-format: 2 files changed, 0 files left unchanged.',
+    ])
 
 
 @pytest.mark.xfail(reason='this is locking up during main(), but works on the cmdline', run=False)
@@ -153,20 +155,79 @@ def test_imports(tmpdir, sort_cfg_to_tmpdir):
     assert filename.read('r') == expected
 
 
-def test_unknown_extension(input_file):
-    new_filename = py.path.local(os.path.splitext(str(input_file))[0] + '.unknown')
-    input_file.move(new_filename)
-    output = run(['--check', str(new_filename)], expected_exit=0)
-    output.fnmatch_lines(str(new_filename) + ': Unknown file type')
+@pytest.mark.parametrize('verbose', [True, False])
+def test_verbosity(tmp_path, input_file, verbose):
+    # already in tmp_path: a py file incorrectly formatted and .isort.cfg
+    # prepare extra files: a CPP file and a py file already properly formatted
+    isort_fn = tmp_path / '.isort.cfg'
+    assert isort_fn.is_file()
 
-    output = run([str(new_filename)], expected_exit=0)
-    output.fnmatch_lines(str(new_filename) + ': Unknown file type')
+    input_cpp = 'namespace boost {}  '
+    cpp_fn = tmp_path / 'foo.cpp'
+    cpp_fn.write_text(input_cpp)
+
+    py_ok = tmp_path / 'aa.py'  # to appear as first file and simplify handling the expected lines
+    py_ok.write_text('import os\n')
+
+    # run once with --check and test output
+    args = ['--check', str(tmp_path)]
+    if verbose:
+        args.append('--verbose')
+    output = run(args, expected_exit=1)
+    expected_lines = []
+    if verbose:
+        expected_lines = [
+            str(isort_fn) + ': Unknown file type',
+            str(py_ok) + ': OK',
+        ]
+    expected_lines.extend([
+        str(cpp_fn) + ': Failed (legacy formatter)',
+        str(input_file) + ': Failed',
+        'fix-format: 2 files would be changed, 1 files would be left unchanged.',
+    ])
+    output.fnmatch_lines(expected_lines)
+
+    # run once fixing files and test output
+    args = [str(tmp_path)]
+    if verbose:
+        args.append('--verbose')
+    output = run(args, expected_exit=0)
+    expected_lines = []
+    if verbose:
+        expected_lines = [
+            str(isort_fn) + ': Unknown file type',
+            str(py_ok) + ': Skipped',
+        ]
+    expected_lines += [
+        str(cpp_fn) + ': Fixed (legacy formatter)',
+        str(input_file) + ': Fixed',
+        'fix-format: 2 files changed, 1 files left unchanged.',
+    ]
+    output.fnmatch_lines(expected_lines)
+
+    # run again with everything already fixed
+    args = [str(tmp_path)]
+    if verbose:
+        args.append('--verbose')
+    output = run(args, expected_exit=0)
+    expected_lines = []
+    if verbose:
+        expected_lines = [
+            str(isort_fn) + ': Unknown file type',
+            str(py_ok) + ': Skipped',
+            str(cpp_fn) + ': Skipped (legacy formatter)',
+            str(input_file) + ': Skipped',
+        ]
+    expected_lines += [
+        'fix-format: 3 files left unchanged.',
+    ]
+    output.fnmatch_lines(expected_lines)
 
 
 def test_filename_without_wildcard(tmpdir, sort_cfg_to_tmpdir):
     filename = tmpdir.join('CMakeLists.txt')
     filename.write('\t#\n')
-    output = run([str(filename)], expected_exit=0)
+    output = run([str(filename), '--verbose'], expected_exit=0)
     output.fnmatch_lines(str(filename) + ': Fixed')
 
 
@@ -183,7 +244,7 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
         return result
 
     m = mocker.patch.object(subprocess, 'check_output', side_effect=check_output)
-    output = run([param], expected_exit=0)
+    output = run([param, '--verbose'], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ': Fixed')
     assert m.call_args_list == [
         mock.call('git rev-parse --show-toplevel', shell=True),
@@ -212,14 +273,21 @@ def test_empty_file(tmpdir, sort_cfg_to_tmpdir):
 
 @pytest.mark.parametrize(
     'notebook_content, expected_exit', [
-        ('"jupytext": {"formats": "ipynb,py"}', 0),
+        ('"jupytext": {"formats": "ipynb,py"} ”', 0),
         ('Not a j-u-p-y-t-e-x-t configured notebook', 1),
+        (None, 1),
     ]
 )
-def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_exit):
-    filename_py = tmpdir.join('test.py')
-    filename_ipynb = tmpdir.join('test.ipynb')
+@pytest.mark.parametrize('formatter', ['pydev', 'black'])
+def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_exit, formatter):
+    if formatter == 'black':
+        tmpdir.join('pyproject.toml').write_text('[tool.black]', 'UTF-8')
 
+    if notebook_content is not None:
+        filename_ipynb = tmpdir.join('test.ipynb')
+        filename_ipynb.write_text(notebook_content, 'UTF-8')
+
+    filename_py = tmpdir.join('test.py')
     py_content = textwrap.dedent('''\
         # -*- coding: utf-8 -*-
         # ---
@@ -236,16 +304,27 @@ def test_ignore_jupytext(tmpdir, sort_cfg_to_tmpdir, notebook_content, expected_
         #     language: python
         #     name: python3
         # ---
+        # ”
         import    matplotlib.pyplot   as plt
     ''')
+    filename_py.write_text(py_content, 'UTF-8')
 
-    filename_py.write(
-        py_content,
-        'w'
-    )
-    filename_ipynb.write(notebook_content, 'w')
-
-    run([str(filename_py), '--check'], expected_exit=expected_exit)
+    output = run([str(filename_py), '--check'], expected_exit=expected_exit)
+    if formatter == 'black':
+        if expected_exit == 0:
+            assert output.str() == 'fix-format: 0 files would be left unchanged.'
+        else:
+            output.fnmatch_lines([
+                '*test.py: Failed',
+            ])
+    else:
+        assert formatter == 'pydev'
+        if expected_exit == 0:
+            assert output.str() == 'fix-format: 0 files would be left unchanged.'
+        else:
+            output.fnmatch_lines([
+                '*test.py: Failed',
+            ])
 
 
 @pytest.mark.parametrize('check', [True, False])
@@ -283,7 +362,7 @@ def test_python_with_bom(tmpdir, sort_cfg_to_tmpdir, check):
 def test_skip_entire_file(tmpdir, sort_cfg_to_tmpdir, source):
     filename = tmpdir.join('test.py')
     filename.write(source)
-    output = run([str(filename)], expected_exit=0)
+    output = run([str(filename), '--verbose'], expected_exit=0)
     output.fnmatch_lines(str(filename) + ': Skipped')
     assert filename.read() == source
 
@@ -527,7 +606,7 @@ def run(args, expected_exit):
 
 
 def fix_valid_file(input_file):
-    output = run([str(input_file)], expected_exit=0)
+    output = run([str(input_file), '--verbose'], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ': Skipped')
 
 
@@ -536,24 +615,120 @@ def _get_formatter_msg(formatter):
 
 
 def check_valid_file(input_file, formatter=None):
-    output = run(['--check', str(input_file)], expected_exit=0)
+    output = run(['--check', '--verbose', str(input_file)], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ': OK' + _get_formatter_msg(formatter))
 
 
 def fix_invalid_file(input_file, formatter=None):
-    output = run([str(input_file)], expected_exit=0)
+    output = run([str(input_file), '--verbose'], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ': Fixed' + _get_formatter_msg(formatter))
 
 
 def check_cli_error_output(input_file, expected_error_message, message_details, formatter=None):
-    output = run([str(input_file)], expected_exit=1)
+    output = run([str(input_file), '--verbose'], expected_exit=1)
     msg = ': ERROR (CalledProcessError: %s): ' % (expected_error_message)
     msg += message_details
     output.fnmatch_lines(str(input_file) + msg)
 
 
 def check_invalid_file(input_file, formatter=None):
-    output = run(['--check', str(input_file)], expected_exit=1)
+    output = run(['--check', '--verbose', str(input_file)], expected_exit=1)
     output.fnmatch_lines(str(input_file) + ': Failed' + _get_formatter_msg(formatter))
-    output.fnmatch_lines('*== failed checks ==*')
-    output.fnmatch_lines(str(input_file))
+
+
+def test_find_black_config(tmp_path):
+    (tmp_path / 'pA/p2/p3').mkdir(parents=True)
+    (tmp_path / 'pA/p2/p3/foo.py').touch()
+    (tmp_path / 'pA/p2/p3/pyproject.toml').touch()
+    (tmp_path / 'pX/p9').mkdir(parents=True)
+    (tmp_path / 'pX/p9/pyproject.toml').touch()
+
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3']) is None
+    assert cli.find_black_config([tmp_path]) is None
+    assert cli.find_black_config([]) is None
+
+    (tmp_path / 'pX/p9/pyproject.toml').write_text('[tool.black]')
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
+    assert cli.find_black_config([tmp_path / 'pX/p9']) == tmp_path / 'pX/p9/pyproject.toml'
+
+    root_toml = tmp_path / 'pyproject.toml'
+    (root_toml).write_text('[tool.black]')
+    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) == root_toml
+
+
+def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
+    (tmp_path / 'pyproject.toml').write_text('[tool.black]')
+    input_source = (
+        'import six\n'
+        'import os\n'
+        'x = [1,\n'
+        '   2,\n'
+        '  3]\n'
+        '\n'
+        '\n'
+        '\n'
+    )
+    py_file = tmp_path / 'foo.py'
+    py_file.write_text(input_source)
+
+    # also write a cpp file to ensure black doesn't try to touch it
+    input_cpp = (
+        'namespace boost {};'
+    )
+    cpp_file = tmp_path / 'foo.cpp'
+    cpp_file.write_text(input_cpp)
+
+    output = run(['--check', str(tmp_path), '--verbose'], expected_exit=1)
+    output.fnmatch_lines([
+        'Checking black on 1 files...',
+        '*foo.cpp: OK*',
+        'fix-format: 1 files would be changed, 1 files would be left unchanged.',
+    ])
+    obtained = py_file.read_text()
+    assert obtained == input_source
+
+    for i in range(2):
+        output = run([str(tmp_path), '--verbose'], expected_exit=0)
+        output.fnmatch_lines([
+            'Running black on 1 files...',
+            '*foo.cpp: Skipped*',
+        ])
+        obtained = py_file.read_text()
+        assert obtained == (
+            'import os\n'
+            '\n'
+            'import six\n'
+            '\n'
+            'x = [1, 2, 3]\n'
+        )
+
+
+def test_skip_git_directory(input_file, tmp_path):
+    (tmp_path / '.git').mkdir()
+    (tmp_path / '.git/dummy.py').touch()
+    (tmp_path / '.git/dummy.cpp').touch()
+
+    output = run([str(tmp_path)], expected_exit=0)
+    output.fnmatch_lines(['fix-format: 1 files changed, 0 files left unchanged.'])
+
+
+def test_black_operates_on_chunks(tmp_path, mocker, sort_cfg_to_tmpdir):
+    """Ensure black is being called in chunks of at most 100 files.
+
+    On Windows there's a limit on command-line size, so we call black in chunks there. This should
+    only happen on converting entire repositories, not in day to day use.
+    """
+    (tmp_path / 'pyproject.toml').write_text('[tool.black]')
+    for i in range(521):
+        (tmp_path / f'{i:03}_foo.py').touch()
+
+    return_codes = [1, 0, 1, 0, 1, 0]  # make black return failures in some batches
+    mocker.patch.object(subprocess, 'call', autospec=True, side_effect=return_codes)
+    output = run([str(tmp_path), '--check'], expected_exit=1)
+    output.fnmatch_lines([
+        'Checking black on 521 files...',
+        'fix-format: 521 files would be left unchanged.'
+    ])
+    call_list = subprocess.call.call_args_list
+    assert len(call_list) == 6  # 521 files in batches of 100

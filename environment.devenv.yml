@@ -3,6 +3,7 @@ name: esss-fix-format-py{{ CONDA_PY }}
 
 dependencies:
   # run
+  - boltons
   - clangdev>=6.0.1
   - click>=6.0
   - isort>=4.3.4
@@ -10,6 +11,7 @@ dependencies:
   - pydevf==0.1.5
 
   # develop
+  - black
   - flake8>=3.5.0
   - mock>=1.0.1
   - pygments>=2.2.0

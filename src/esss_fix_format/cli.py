@@ -4,9 +4,12 @@ import os
 import re
 import subprocess
 import sys
+from typing import Optional, Tuple
 
+import boltons.iterutils
 import click
 import pydevf
+from pathlib import Path
 
 CPP_PATTERNS = {
     '*.cpp',
@@ -27,6 +30,11 @@ PATTERNS = {
     '*.cmake',
 }.union(CPP_PATTERNS)
 
+SKIP_DIRS = {
+    '.git',
+    '.hg',
+}
+
 
 def is_cpp(filename):
     """Return True if the filename is of a type that should be treated as C++ source."""
@@ -44,16 +52,33 @@ def should_format(filename):
     ipynb_filename = filename_no_ext + '.ipynb'
     # ignore .py file that has a jupytext configured notebook with the same base name
     if ext == '.py' and os.path.isfile(ipynb_filename):
-        with open(ipynb_filename) as f:
-            if 'jupytext' not in f.read():
+        with open(ipynb_filename, 'rb') as f:
+            if b'jupytext' not in f.read():
                 return True, ''
-        with open(filename) as f:
-            if 'jupytext:' not in f.read():
+        with open(filename, 'rb') as f:
+            if b'jupytext:' not in f.read():
                 return True, ''
         return False, 'Jupytext generated file'
     if any(fnmatch(os.path.basename(filename), p) for p in PATTERNS):
         return True, ''
     return False, 'Unknown file type'
+
+
+def find_black_config(files_or_directories) -> Optional[Path]:
+    """
+    Searches for a valid pyproject.toml file based on the list of files/directories given.
+
+    We find the common ancestor of all files/directories given, then search from there
+    upwards for a "pyproject.toml" file with a "[tool.black]" section.
+    """
+    if not files_or_directories:
+        return None
+    common = Path(os.path.commonpath(files_or_directories))
+    for p in ([common] + list(common.parents)):
+        fn = p / 'pyproject.toml'
+        if fn.is_file() and '[tool.black]' in fn.read_text(encoding='UTF-8'):
+            return fn
+    return None
 
 
 # caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
@@ -128,7 +153,9 @@ def _wait_current_processes():
               help='Use modified files from git.')
 @click.option('--git-hooks', default=False, is_flag=True,
               help='Add git pre-commit hooks to the repo in the current dir.')
-def main(files_or_directories, check, stdin, commit, git_hooks):
+@click.option('-v', '--verbose', default=False, is_flag=True,
+              help='Show skipped files in the output')
+def main(files_or_directories, check, stdin, commit, git_hooks, verbose):
     """Fixes and checks formatting according to ESSS standards."""
 
     if git_hooks:
@@ -149,14 +176,14 @@ def main(files_or_directories, check, stdin, commit, git_hooks):
         return pydevf.format_code_server(formatter[0], code_to_format)
 
     try:
-        return _main(files_or_directories, check, stdin, commit, format_code)
+        return _main(files_or_directories, check, stdin, commit, format_code, verbose=verbose)
     finally:
         if formatter:
             # Stop pydevf if needed.
             pydevf.stop_format_server(formatter[0])
 
 
-def _process_file(filename, check, format_code):
+def _process_file(filename, check, format_code, *, verbose):
     '''
     :returns: a tuple with (changed, errors, formatter):
         - `changed` is a boolean, True if the file was changed
@@ -169,12 +196,6 @@ def _process_file(filename, check, format_code):
     changed = False
     errors = []
     formatter = None
-
-    fmt, reason = should_format(filename)
-
-    if not fmt:
-        click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
-        return changed, errors, formatter
 
     if is_cpp(filename):
         with io.open(filename, 'rb') as f:
@@ -263,13 +284,14 @@ def _process_file(filename, check, format_code):
         if new_contents is None:
             new_contents = original_contents
 
-        try:
-            # Pass code formatter.
-            new_contents = format_code(new_contents)
-        except Exception as e:
-            error_msg = f'Error formatting code: {e}'
-            click.secho(error_msg, fg='red')
-            errors.append(error_msg)
+        if format_code is not None:
+            try:
+                # Pass code formatter.
+                new_contents = format_code(new_contents)
+            except Exception as e:
+                error_msg = f'Error formatting code: {e}'
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
 
         if new_contents and (new_contents[0] == codecs.BOM_UTF8.decode('UTF-8')):
             msg = ': ERROR python file should not have a BOM.'
@@ -291,7 +313,48 @@ def _process_file(filename, check, format_code):
     return changed, errors, formatter
 
 
-def _main(files_or_directories, check, stdin, commit, format_code):
+def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
+    """
+    Runs black on the given files (checking or formatting).
+
+    Black's output is shown directly to the user, so even in events of errors it is
+    expected that the users sees the error directly.
+
+    We need this function to work differently than the rest of ``esss_fix_format`` (which processes
+    each file individually) because we want to call black only once, reformatting all files
+    given to it in the command-line.
+
+    :return: a pair (would_be_formatted, black_failed)
+    """
+    py_files = [x for x in files if x.suffix == '.py' and should_format(str(x))[0]]
+    black_failed = False
+    would_be_formatted = False
+    if py_files:
+        if check:
+            click.secho(f'Checking black on {len(py_files)} files...', fg='cyan')
+        else:
+            click.secho(f'Running black on {len(py_files)} files...', fg='cyan')
+        # on Windows there's a limit on the command-line size, so we call black in batches
+        # this should only be an issue when executing fix-format over the entire repository,
+        # not on day to day usage
+        chunk_size = 100
+        for chunked_files in boltons.iterutils.chunked(py_files, chunk_size):
+            args = ['black']
+            if check:
+                args.append('--check')
+            if verbose:
+                args.append('--verbose')
+            args.extend(str(x) for x in chunked_files)
+            status = subprocess.call(args)
+            if not black_failed:
+                black_failed = not check and status != 0
+            if not would_be_formatted:
+                would_be_formatted = check and status == 1
+
+    return would_be_formatted, black_failed
+
+
+def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, verbose):
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
     elif commit:
@@ -301,21 +364,47 @@ def _main(files_or_directories, check, stdin, commit, format_code):
         for file_or_dir in files_or_directories:
             if os.path.isdir(file_or_dir):
                 for root, dirs, names in os.walk(file_or_dir):
+                    for dirname in list(dirs):
+                        if dirname in SKIP_DIRS:
+                            dirs.remove(dirname)
                     files.extend(os.path.join(root, n) for n in names if should_format(n))
             else:
                 files.append(file_or_dir)
-    changed_files = []
+
+    files = sorted(Path(x) for x in files)
     errors = []
+
+    black_config = find_black_config(files)
+    would_be_formatted = False
+    if black_config:
+        # skip pydevf formatter
+        pydevf_format_func = None
+        would_be_formatted, black_failed = run_black_on_python_files(files, check, verbose)
+        if black_failed:
+            errors.append('Error formatting black (see console)')
+
+    changed_files = []
+    analysed_files = []
     for filename in files:
-        changed, new_errors, formatter = _process_file(filename, check, format_code)
+        filename = str(filename)
+        fmt, reason = should_format(filename)
+        if not fmt:
+            if verbose:
+                click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
+            continue
+
+        analysed_files.append(filename)
+        changed, new_errors, formatter = _process_file(filename, check, pydevf_format_func,
+                                                       verbose=verbose)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)
         status, color = _get_status_and_color(check, changed)
-        msg = click.format_filename(filename) + ': ' + status
-        if formatter is not None:
-            msg += ' (' + formatter + ')'
-        click.secho(msg, fg=color)
+        if changed or verbose:
+            msg = click.format_filename(filename) + ': ' + status
+            if formatter is not None:
+                msg += ' (' + formatter + ')'
+            click.secho(msg, fg=color)
 
     def banner(caption):
         caption = ' %s ' % caption
@@ -329,11 +418,18 @@ def _main(files_or_directories, check, stdin, commit, format_code):
         for error_msg in errors:
             click.secho(error_msg, fg='red')
         sys.exit(1)
-    if check and changed_files:
-        click.secho('')
-        click.secho(banner('failed checks'), fg='yellow')
-        for filename in changed_files:
-            click.secho(filename, fg='yellow')
+
+    # show a summary of what has been done
+    verb = 'would be ' if check else ''
+    if changed_files:
+        first_sentence = f'{len(changed_files)} files {verb}changed, '
+    else:
+        first_sentence = ''
+    click.secho(f'fix-format: {first_sentence}'
+                f'{len(analysed_files) - len(changed_files)} files {verb}left unchanged.',
+                bold=True, fg='green')
+
+    if check and (changed_files or would_be_formatted):
         sys.exit(1)
 
 
