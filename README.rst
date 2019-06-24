@@ -146,7 +146,7 @@ Follow this steps to re format an entire project and start using the pre-commit 
 
     .. code-block:: sh
 
-        $ git commit -anm "Apply fix-format on all files" --author="fix-format"
+        $ git commit -anm "Apply fix-format on all files" --author="fix-format <fix-format@esss.com.br>"
 
 8. Push and run your branch on CI.
 
@@ -210,7 +210,7 @@ The first step is converting your ``master`` branch to black.
 
    .. code-block:: sh
 
-      $ git commit -anm "Convert source files to black" --author="fix-format"
+      $ git commit -anm "Convert source files to black" --author="fix-format <fix-format@esss.com.br>"
 
 
 Porting an existing branch to black
@@ -237,7 +237,7 @@ merge -> Fix format
 
    .. code-block:: sh
 
-     $ git commit -anm "Convert source files to black" --author="fix-format"
+     $ git commit -anm "Convert source files to black" --author="fix-format <fix-format@esss.com.br>"
 
 
 Fix format -> merge
@@ -258,7 +258,7 @@ Fix format -> merge
 
    .. code-block:: sh
 
-     $ git commit -anm "Convert source files to black" --author="fix-format"
+     $ git commit -anm "Convert source files to black" --author="fix-format <fix-format@esss.com.br>"
 
 
 Developing
