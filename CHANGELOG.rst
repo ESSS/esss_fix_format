@@ -2,6 +2,11 @@
 History
 =======
 
+2.0.1 (2019-06-26)
+------------------
+
+* Fix bug where ``pyproject.toml`` would not be found if a relative path was given in the command-line.
+
 2.0.0 (2019-06-24)
 ------------------
 

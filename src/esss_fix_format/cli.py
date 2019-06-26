@@ -73,7 +73,7 @@ def find_black_config(files_or_directories) -> Optional[Path]:
     """
     if not files_or_directories:
         return None
-    common = Path(os.path.commonpath(files_or_directories))
+    common = Path(os.path.commonpath(files_or_directories)).resolve()
     for p in ([common] + list(common.parents)):
         fn = p / 'pyproject.toml'
         if fn.is_file() and '[tool.black]' in fn.read_text(encoding='UTF-8'):
