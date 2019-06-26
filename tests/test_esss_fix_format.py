@@ -636,7 +636,7 @@ def check_invalid_file(input_file, formatter=None):
     output.fnmatch_lines(str(input_file) + ': Failed' + _get_formatter_msg(formatter))
 
 
-def test_find_black_config(tmp_path):
+def test_find_black_config(tmp_path, monkeypatch):
     (tmp_path / 'pA/p2/p3').mkdir(parents=True)
     (tmp_path / 'pA/p2/p3/foo.py').touch()
     (tmp_path / 'pA/p2/p3/pyproject.toml').touch()
@@ -655,6 +655,9 @@ def test_find_black_config(tmp_path):
     root_toml = tmp_path / 'pyproject.toml'
     (root_toml).write_text('[tool.black]')
     assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) == root_toml
+
+    monkeypatch.chdir(str(tmp_path / 'pA/p2'))
+    assert cli.find_black_config(['.']) == root_toml
 
 
 def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
