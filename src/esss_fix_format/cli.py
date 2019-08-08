@@ -1,10 +1,11 @@
+#!python
 import codecs
 import io
 import os
 import re
 import subprocess
 import sys
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import boltons.iterutils
 import click
@@ -35,6 +36,7 @@ SKIP_DIRS = {
     '.hg',
 }
 
+EXCLUDE_PATTERNS = []
 
 def is_cpp(filename):
     """Return True if the filename is of a type that should be treated as C++ source."""
@@ -48,9 +50,14 @@ def should_format(filename):
     is of a type that is supported by this tool.
     """
     from fnmatch import fnmatch
+
+    for exclude_pattern in EXCLUDE_PATTERNS:
+        if fnmatch(filename, exclude_pattern):
+            return False, 'Excluded file'
+
     filename_no_ext, ext = os.path.splitext(filename)
-    ipynb_filename = filename_no_ext + '.ipynb'
     # ignore .py file that has a jupytext configured notebook with the same base name
+    ipynb_filename = filename_no_ext + '.ipynb'
     if ext == '.py' and os.path.isfile(ipynb_filename):
         with open(ipynb_filename, 'rb') as f:
             if b'jupytext' not in f.read():
@@ -64,7 +71,7 @@ def should_format(filename):
     return False, 'Unknown file type'
 
 
-def find_black_config(files_or_directories) -> Optional[Path]:
+def find_pyproject_toml(files_or_directories) -> Optional[Path]:
     """
     Searches for a valid pyproject.toml file based on the list of files/directories given.
 
@@ -76,9 +83,26 @@ def find_black_config(files_or_directories) -> Optional[Path]:
     common = Path(os.path.commonpath(files_or_directories)).resolve()
     for p in ([common] + list(common.parents)):
         fn = p / 'pyproject.toml'
-        if fn.is_file() and '[tool.black]' in fn.read_text(encoding='UTF-8'):
+        if fn.is_file():
             return fn
     return None
+
+
+def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
+    import toml
+
+    toml_contents = toml.load(pyproject_toml)
+    ff_options = toml_contents.get('tool', {}).get('esss_fix_format', {})
+    excludes_option = ff_options.get('exclude', [])
+    if not isinstance(excludes_option, list):
+        raise TypeError(f"pyproject.toml excludes option must be a list, got {type(excludes_option)})")
+    return excludes_option
+
+
+def has_black_config(pyproject_toml: Path) -> bool:
+    if pyproject_toml is None:
+        return False
+    return pyproject_toml.is_file() and '[tool.black]' in pyproject_toml.read_text(encoding='UTF-8')
 
 
 # caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
@@ -374,9 +398,14 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     files = sorted(Path(x) for x in files)
     errors = []
 
-    black_config = find_black_config(files)
+    pyproject_toml = find_pyproject_toml(files)
+
+    if pyproject_toml:
+        global EXCLUDE_PATTERNS
+        EXCLUDE_PATTERNS = read_exclude_patterns(pyproject_toml)
+
     would_be_formatted = False
-    if black_config:
+    if has_black_config(pyproject_toml):
         # skip pydevf formatter
         pydevf_format_func = None
         would_be_formatted, black_failed = run_black_on_python_files(files, check, verbose)

@@ -636,28 +636,30 @@ def check_invalid_file(input_file, formatter=None):
     output.fnmatch_lines(str(input_file) + ': Failed' + _get_formatter_msg(formatter))
 
 
-def test_find_black_config(tmp_path, monkeypatch):
+def test_find_pyproject_toml(tmp_path, monkeypatch):
     (tmp_path / 'pA/p2/p3').mkdir(parents=True)
     (tmp_path / 'pA/p2/p3/foo.py').touch()
     (tmp_path / 'pA/p2/p3/pyproject.toml').touch()
     (tmp_path / 'pX/p9').mkdir(parents=True)
     (tmp_path / 'pX/p9/pyproject.toml').touch()
 
-    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
-    assert cli.find_black_config([tmp_path / 'pA/p2/p3']) is None
-    assert cli.find_black_config([tmp_path]) is None
-    assert cli.find_black_config([]) is None
+    assert cli.find_pyproject_toml([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
+    assert cli.find_pyproject_toml([tmp_path / 'pA/p2/p3'])
+    assert cli.has_black_config(tmp_path / 'pA/p2/p3/pyproject.toml') is False
+    assert cli.find_pyproject_toml([tmp_path]) is None
+    assert cli.find_pyproject_toml([]) is None
 
     (tmp_path / 'pX/p9/pyproject.toml').write_text('[tool.black]')
-    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
-    assert cli.find_black_config([tmp_path / 'pX/p9']) == tmp_path / 'pX/p9/pyproject.toml'
+    assert cli.find_pyproject_toml([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) is None
+    assert cli.find_pyproject_toml([tmp_path / 'pX/p9']) == tmp_path / 'pX/p9/pyproject.toml'
+    assert cli.has_black_config(tmp_path / 'pX/p9/pyproject.toml') is True
 
     root_toml = tmp_path / 'pyproject.toml'
     (root_toml).write_text('[tool.black]')
-    assert cli.find_black_config([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) == root_toml
+    assert cli.find_pyproject_toml([tmp_path / 'pA/p2/p3/foo.py', tmp_path / 'pX/p9']) == root_toml
 
     monkeypatch.chdir(str(tmp_path / 'pA/p2'))
-    assert cli.find_black_config(['.']) == root_toml
+    assert cli.find_pyproject_toml(['.']) == root_toml
 
 
 def test_black_integration(tmp_path, sort_cfg_to_tmpdir):
@@ -735,3 +737,30 @@ def test_black_operates_on_chunks(tmp_path, mocker, sort_cfg_to_tmpdir):
     ])
     call_list = subprocess.call.call_args_list
     assert len(call_list) == 6  # 521 files in batches of 100
+
+
+def test_exclude_patterns(tmp_path, monkeypatch):
+    config_content = '''[tool.esss_fix_format]
+    exclude = [
+        "src/drafts/*.py",
+        "tmp/*",
+    ]
+    '''
+
+    config_file = tmp_path / 'pyproject.toml'
+    config_file.write_text(config_content)
+    monkeypatch.setattr(cli, "EXCLUDE_PATTERNS", cli.read_exclude_patterns(config_file))
+    assert not cli.should_format('src/drafts/foo.py')[0]
+    assert cli.should_format('src/drafts/foo.cpp')[0]
+    assert not cli.should_format('tmp/foo.cpp')[0]
+    assert cli.should_format('src/python/foo.py')[0]
+
+
+def test_invaldi_exclude_patterns(tmp_path):
+    config_content = '''[tool.esss_fix_format]
+    exclude = "src/drafts/*.py"
+    '''
+
+    config_file = tmp_path / 'pyproject.toml'
+    config_file.write_text(config_content)
+    pytest.raises(TypeError, cli.read_exclude_patterns, config_file)

@@ -11,6 +11,7 @@ requirements = [
     'click>=6.0',
     'isort',
     'pydevf==0.1.5',
+    'toml>=0.8.0',
 ]
 
 setup(
