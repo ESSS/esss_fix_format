@@ -5,12 +5,12 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 from typing import Optional, Tuple, Iterable, List
 
 import boltons.iterutils
 import click
 import pydevf
-from pathlib import Path
 
 CPP_PATTERNS = {
     '*.cpp',
@@ -43,7 +43,8 @@ def is_cpp(filename):
     return any(fnmatch(os.path.basename(filename), p) for p in CPP_PATTERNS)
 
 
-def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]) -> Tuple[bool, str]:
+def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]) \
+        -> Tuple[bool, str]:
     """
     Return a tuple (fmt, reason) where fmt is True if the filename should be formatted.
 
@@ -102,12 +103,14 @@ def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
     ff_options = toml_contents.get('tool', {}).get('esss_fix_format', {})
     excludes_option = ff_options.get('exclude', [])
     if not isinstance(excludes_option, list):
-        raise TypeError(f"pyproject.toml excludes option must be a list, got {type(excludes_option)})")
+        raise TypeError(
+            f"pyproject.toml excludes option must be a list, got {type(excludes_option)})"
+        )
 
     # Fix exclude paths based on cwd (exclude paths are defined relative to TOML file)
     cwd_relpath_from_toml = os.path.relpath(os.getcwd(), pyproject_toml.parent)
     if cwd_relpath_from_toml != '.':
-        excludes_option = [pattern.replace(cwd_relpath_from_toml + '/', '', 1) for pattern in excludes_option]
+        excludes_option = [p.replace(cwd_relpath_from_toml + '/', '', 1) for p in excludes_option]
     return excludes_option
 
 
@@ -362,7 +365,7 @@ def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[
 
     :return: a pair (would_be_formatted, black_failed)
     """
-    py_files = [x for x in files if x.suffix == '.py' and should_format(str(x), PATTERNS, exclude_patterns)[0]]
+    py_files = [x for x in files if should_format(str(x), ['*.py'], exclude_patterns)[0]]
     black_failed = False
     would_be_formatted = False
     if py_files:
@@ -403,7 +406,9 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
                     for dirname in list(dirs):
                         if dirname in SKIP_DIRS:
                             dirs.remove(dirname)
-                    files.extend(os.path.join(root, n) for n in names if should_format(n, PATTERNS, []))
+                    files.extend(
+                        os.path.join(root, n) for n in names if should_format(n, PATTERNS, [])
+                    )
             else:
                 files.append(file_or_dir)
 
@@ -420,7 +425,8 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     if has_black_config(pyproject_toml):
         # skip pydevf formatter
         pydevf_format_func = None
-        would_be_formatted, black_failed = run_black_on_python_files(files, check, exclude_patterns, verbose)
+        would_be_formatted, black_failed = \
+            run_black_on_python_files(files, check, exclude_patterns, verbose)
         if black_failed:
             errors.append('Error formatting black (see console)')
 
