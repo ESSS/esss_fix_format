@@ -749,11 +749,12 @@ def test_exclude_patterns(tmp_path, monkeypatch):
 
     config_file = tmp_path / 'pyproject.toml'
     config_file.write_text(config_content)
-    monkeypatch.setattr(cli, "EXCLUDE_PATTERNS", cli.read_exclude_patterns(config_file))
-    assert not cli.should_format('src/drafts/foo.py')[0]
-    assert cli.should_format('src/drafts/foo.cpp')[0]
-    assert not cli.should_format('tmp/foo.cpp')[0]
-    assert cli.should_format('src/python/foo.py')[0]
+    include_patterns = ['*.cpp', '*.py']
+    exclude_patterns = cli.read_exclude_patterns(config_file)
+    assert not cli.should_format('src/drafts/foo.py', include_patterns, exclude_patterns)[0]
+    assert cli.should_format('src/drafts/foo.cpp', include_patterns, exclude_patterns)[0]
+    assert not cli.should_format('tmp/foo.cpp', include_patterns, exclude_patterns)[0]
+    assert cli.should_format('src/python/foo.py', include_patterns, exclude_patterns)[0]
 
 
 def test_invalid_exclude_patterns(tmp_path):
@@ -779,5 +780,6 @@ def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
     run_dir.mkdir()
     config_file.write_text(config_content)
     monkeypatch.chdir(run_dir)
-    monkeypatch.setattr(cli, "EXCLUDE_PATTERNS", cli.read_exclude_patterns(config_file))
-    assert not cli.should_format('drafts/foo.py')[0]
+    include_patterns = ['*.py']
+    exclude_patterns = cli.read_exclude_patterns(config_file)
+    assert not cli.should_format('drafts/foo.py', include_patterns, exclude_patterns)[0]

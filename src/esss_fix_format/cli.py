@@ -5,7 +5,7 @@ import os
 import re
 import subprocess
 import sys
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, Iterable, List
 
 import boltons.iterutils
 import click
@@ -36,8 +36,6 @@ SKIP_DIRS = {
     '.hg',
 }
 
-EXCLUDE_PATTERNS = []
-
 
 def is_cpp(filename):
     """Return True if the filename is of a type that should be treated as C++ source."""
@@ -45,16 +43,22 @@ def is_cpp(filename):
     return any(fnmatch(os.path.basename(filename), p) for p in CPP_PATTERNS)
 
 
-def should_format(filename):
+def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]) -> Tuple[bool, str]:
     """
-    Return a tuple (fmt, reason) where fmt is True if the filename
-    is of a type that is supported by this tool.
+    Return a tuple (fmt, reason) where fmt is True if the filename should be formatted.
+
+    :param filename: file name to verify if should be formatted or not
+
+    :param include_patterns: list of file patterns to be excluded from formatting
+
+    :param exclude_patterns: list of file patterns to be excluded from formatting
+
+    :rtype: bool
     """
     from fnmatch import fnmatch
 
-    for exclude_pattern in EXCLUDE_PATTERNS:
-        if fnmatch(filename, exclude_pattern):
-            return False, 'Excluded file'
+    if any(fnmatch(filename, pattern) for pattern in exclude_patterns):
+        return False, 'Excluded file'
 
     filename_no_ext, ext = os.path.splitext(filename)
     # ignore .py file that has a jupytext configured notebook with the same base name
@@ -67,8 +71,10 @@ def should_format(filename):
             if b'jupytext:' not in f.read():
                 return True, ''
         return False, 'Jupytext generated file'
-    if any(fnmatch(os.path.basename(filename), p) for p in PATTERNS):
+
+    if any(fnmatch(os.path.basename(filename), pattern) for pattern in include_patterns):
         return True, ''
+
     return False, 'Unknown file type'
 
 
@@ -343,7 +349,7 @@ def _process_file(filename, check, format_code, *, verbose):
     return changed, errors, formatter
 
 
-def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
+def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[bool, bool]:
     """
     Runs black on the given files (checking or formatting).
 
@@ -356,7 +362,7 @@ def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
 
     :return: a pair (would_be_formatted, black_failed)
     """
-    py_files = [x for x in files if x.suffix == '.py' and should_format(str(x))[0]]
+    py_files = [x for x in files if x.suffix == '.py' and should_format(str(x), PATTERNS, exclude_patterns)[0]]
     black_failed = False
     would_be_formatted = False
     if py_files:
@@ -397,7 +403,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
                     for dirname in list(dirs):
                         if dirname in SKIP_DIRS:
                             dirs.remove(dirname)
-                    files.extend(os.path.join(root, n) for n in names if should_format(n))
+                    files.extend(os.path.join(root, n) for n in names if should_format(n, PATTERNS, []))
             else:
                 files.append(file_or_dir)
 
@@ -405,16 +411,16 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     errors = []
 
     pyproject_toml = find_pyproject_toml(files)
-
     if pyproject_toml:
-        global EXCLUDE_PATTERNS
-        EXCLUDE_PATTERNS = read_exclude_patterns(pyproject_toml)
+        exclude_patterns = read_exclude_patterns(pyproject_toml)
+    else:
+        exclude_patterns = []
 
     would_be_formatted = False
     if has_black_config(pyproject_toml):
         # skip pydevf formatter
         pydevf_format_func = None
-        would_be_formatted, black_failed = run_black_on_python_files(files, check, verbose)
+        would_be_formatted, black_failed = run_black_on_python_files(files, check, exclude_patterns, verbose)
         if black_failed:
             errors.append('Error formatting black (see console)')
 
@@ -422,7 +428,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     analysed_files = []
     for filename in files:
         filename = str(filename)
-        fmt, reason = should_format(filename)
+        fmt, reason = should_format(filename, PATTERNS, exclude_patterns)
         if not fmt:
             if verbose:
                 click.secho(click.format_filename(filename) + ': ' + reason, fg='white')
