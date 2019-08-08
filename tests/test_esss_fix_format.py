@@ -756,7 +756,7 @@ def test_exclude_patterns(tmp_path, monkeypatch):
     assert cli.should_format('src/python/foo.py')[0]
 
 
-def test_invaldi_exclude_patterns(tmp_path):
+def test_invalid_exclude_patterns(tmp_path):
     config_content = '''[tool.esss_fix_format]
     exclude = "src/drafts/*.py"
     '''
@@ -764,3 +764,20 @@ def test_invaldi_exclude_patterns(tmp_path):
     config_file = tmp_path / 'pyproject.toml'
     config_file.write_text(config_content)
     pytest.raises(TypeError, cli.read_exclude_patterns, config_file)
+
+
+def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
+    config_content = '''[tool.esss_fix_format]
+    exclude = [
+        "src/drafts/*.py",
+        "tmp/*",
+    ]
+    '''
+
+    config_file = tmp_path / 'pyproject.toml'
+    run_dir = tmp_path / 'src'
+    run_dir.mkdir()
+    config_file.write_text(config_content)
+    monkeypatch.chdir(run_dir)
+    monkeypatch.setattr(cli, "EXCLUDE_PATTERNS", cli.read_exclude_patterns(config_file))
+    assert not cli.should_format('drafts/foo.py')[0]

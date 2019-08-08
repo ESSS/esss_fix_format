@@ -38,6 +38,7 @@ SKIP_DIRS = {
 
 EXCLUDE_PATTERNS = []
 
+
 def is_cpp(filename):
     """Return True if the filename is of a type that should be treated as C++ source."""
     from fnmatch import fnmatch
@@ -96,6 +97,11 @@ def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
     excludes_option = ff_options.get('exclude', [])
     if not isinstance(excludes_option, list):
         raise TypeError(f"pyproject.toml excludes option must be a list, got {type(excludes_option)})")
+
+    # Fix exclude paths based on cwd (exclude paths are defined relative to TOML file)
+    cwd_relpath_from_toml = os.path.relpath(os.getcwd(), pyproject_toml.parent)
+    if cwd_relpath_from_toml != '.':
+        excludes_option = [pattern.replace(cwd_relpath_from_toml + '/', '', 1) for pattern in excludes_option]
     return excludes_option
 
 
