@@ -43,18 +43,18 @@ def is_cpp(filename):
     return any(fnmatch(os.path.basename(filename), p) for p in CPP_PATTERNS)
 
 
-def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]) \
-        -> Tuple[bool, str]:
+def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]):
     """
     Return a tuple (fmt, reason) where fmt is True if the filename should be formatted.
 
     :param filename: file name to verify if should be formatted or not
 
-    :param include_patterns: list of file patterns to be excluded from formatting
+    :param include_patterns: list of file patterns to be included in the formatting
 
-    :param exclude_patterns: list of file patterns to be excluded from formatting
+    :param exclude_patterns: list of file patterns to be excluded from formatting. Has precedence
+        over `include_patterns`
 
-    :rtype: bool
+    :rtype: Tuple[bool, str]
     """
     from fnmatch import fnmatch
 
@@ -114,7 +114,7 @@ def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
     return excludes_option
 
 
-def has_black_config(pyproject_toml: Path) -> bool:
+def has_black_config(pyproject_toml: Optional[Path]) -> bool:
     if pyproject_toml is None:
         return False
     return pyproject_toml.is_file() and '[tool.black]' in pyproject_toml.read_text(encoding='UTF-8')
