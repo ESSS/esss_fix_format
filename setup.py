@@ -16,7 +16,7 @@ requirements = [
 
 setup(
     name='esss_fix_format',
-    version='2.0.0',
+    version='2.1.0',
     description="ESSS code formatter and checker",
     long_description=readme + '\n\n' + changelog,
     author="ESSS",

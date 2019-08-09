@@ -2,7 +2,7 @@
 History
 =======
 
-2.1.0
+2.1.0 (2019-08-09)
 ------------------
 
 * ``fix-format`` now allows exclude patterns to be configured through ``pyproject.toml``.
