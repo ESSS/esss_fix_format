@@ -1,15 +1,16 @@
+#!python
 import codecs
 import io
 import os
 import re
 import subprocess
 import sys
-from typing import Optional, Tuple
+from pathlib import Path
+from typing import Optional, Tuple, Iterable, List
 
 import boltons.iterutils
 import click
 import pydevf
-from pathlib import Path
 
 CPP_PATTERNS = {
     '*.cpp',
@@ -42,15 +43,27 @@ def is_cpp(filename):
     return any(fnmatch(os.path.basename(filename), p) for p in CPP_PATTERNS)
 
 
-def should_format(filename):
+def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]):
     """
-    Return a tuple (fmt, reason) where fmt is True if the filename
-    is of a type that is supported by this tool.
+    Return a tuple (fmt, reason) where fmt is True if the filename should be formatted.
+
+    :param filename: file name to verify if should be formatted or not
+
+    :param include_patterns: list of file patterns to be included in the formatting
+
+    :param exclude_patterns: list of file patterns to be excluded from formatting. Has precedence
+        over `include_patterns`
+
+    :rtype: Tuple[bool, str]
     """
     from fnmatch import fnmatch
+
+    if any(fnmatch(filename, pattern) for pattern in exclude_patterns):
+        return False, 'Excluded file'
+
     filename_no_ext, ext = os.path.splitext(filename)
-    ipynb_filename = filename_no_ext + '.ipynb'
     # ignore .py file that has a jupytext configured notebook with the same base name
+    ipynb_filename = filename_no_ext + '.ipynb'
     if ext == '.py' and os.path.isfile(ipynb_filename):
         with open(ipynb_filename, 'rb') as f:
             if b'jupytext' not in f.read():
@@ -59,12 +72,14 @@ def should_format(filename):
             if b'jupytext:' not in f.read():
                 return True, ''
         return False, 'Jupytext generated file'
-    if any(fnmatch(os.path.basename(filename), p) for p in PATTERNS):
+
+    if any(fnmatch(os.path.basename(filename), pattern) for pattern in include_patterns):
         return True, ''
+
     return False, 'Unknown file type'
 
 
-def find_black_config(files_or_directories) -> Optional[Path]:
+def find_pyproject_toml(files_or_directories) -> Optional[Path]:
     """
     Searches for a valid pyproject.toml file based on the list of files/directories given.
 
@@ -76,9 +91,33 @@ def find_black_config(files_or_directories) -> Optional[Path]:
     common = Path(os.path.commonpath(files_or_directories)).resolve()
     for p in ([common] + list(common.parents)):
         fn = p / 'pyproject.toml'
-        if fn.is_file() and '[tool.black]' in fn.read_text(encoding='UTF-8'):
+        if fn.is_file():
             return fn
     return None
+
+
+def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
+    import toml
+
+    toml_contents = toml.load(pyproject_toml)
+    ff_options = toml_contents.get('tool', {}).get('esss_fix_format', {})
+    excludes_option = ff_options.get('exclude', [])
+    if not isinstance(excludes_option, list):
+        raise TypeError(
+            f"pyproject.toml excludes option must be a list, got {type(excludes_option)})"
+        )
+
+    # Fix exclude paths based on cwd (exclude paths are defined relative to TOML file)
+    cwd_relpath_from_toml = os.path.relpath(os.getcwd(), pyproject_toml.parent)
+    if cwd_relpath_from_toml != '.':
+        excludes_option = [p.replace(cwd_relpath_from_toml + '/', '', 1) for p in excludes_option]
+    return excludes_option
+
+
+def has_black_config(pyproject_toml: Optional[Path]) -> bool:
+    if pyproject_toml is None:
+        return False
+    return pyproject_toml.is_file() and '[tool.black]' in pyproject_toml.read_text(encoding='UTF-8')
 
 
 # caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
@@ -313,7 +352,7 @@ def _process_file(filename, check, format_code, *, verbose):
     return changed, errors, formatter
 
 
-def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
+def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[bool, bool]:
     """
     Runs black on the given files (checking or formatting).
 
@@ -326,7 +365,7 @@ def run_black_on_python_files(files, check, verbose) -> Tuple[bool, bool]:
 
     :return: a pair (would_be_formatted, black_failed)
     """
-    py_files = [x for x in files if x.suffix == '.py' and should_format(str(x))[0]]
+    py_files = [x for x in files if should_format(str(x), ['*.py'], exclude_patterns)[0]]
     black_failed = False
     would_be_formatted = False
     if py_files:
@@ -367,19 +406,27 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
                     for dirname in list(dirs):
                         if dirname in SKIP_DIRS:
                             dirs.remove(dirname)
-                    files.extend(os.path.join(root, n) for n in names if should_format(n))
+                    files.extend(
+                        os.path.join(root, n) for n in names if should_format(n, PATTERNS, [])
+                    )
             else:
                 files.append(file_or_dir)
 
     files = sorted(Path(x) for x in files)
     errors = []
 
-    black_config = find_black_config(files)
+    pyproject_toml = find_pyproject_toml(files)
+    if pyproject_toml:
+        exclude_patterns = read_exclude_patterns(pyproject_toml)
+    else:
+        exclude_patterns = []
+
     would_be_formatted = False
-    if black_config:
+    if has_black_config(pyproject_toml):
         # skip pydevf formatter
         pydevf_format_func = None
-        would_be_formatted, black_failed = run_black_on_python_files(files, check, verbose)
+        would_be_formatted, black_failed = \
+            run_black_on_python_files(files, check, exclude_patterns, verbose)
         if black_failed:
             errors.append('Error formatting black (see console)')
 
@@ -387,7 +434,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     analysed_files = []
     for filename in files:
         filename = str(filename)
-        fmt, reason = should_format(filename)
+        fmt, reason = should_format(filename, PATTERNS, exclude_patterns)
         if not fmt:
             if verbose:
                 click.secho(click.format_filename(filename) + ': ' + reason, fg='white')

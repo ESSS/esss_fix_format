@@ -9,6 +9,7 @@ dependencies:
   - isort>=4.3.4
   - python={{ '.'.join(CONDA_PY) }}
   - pydevf==0.1.5
+  - toml>=0.8.0
 
   # develop
   - black

@@ -53,17 +53,37 @@ Use ``fix-format`` (or ``ff`` for short) to reorder imports and format source co
 
 .. _black:
 
+Options
+-------
+
+Options for ``fix-format`` are defined in the section ``[tool.esss_fix_format]]`` of a ``pyproject.toml`` file. The
+TOML file should be placed in an ancestor directory of the filenames passed on the command-line.
+
+
+Exclude
+^^^^^^^
+
+A list of file name patterns to be excluded from the formatting. Patterns are matched using python ``fnmatch``:
+
+   .. code-block:: toml
+
+    [tool.esss_fix_format]
+    exclude = [
+        "src/generated/*.py",
+        "tmp/*",
+    ]
+
+
 Black
 ^^^^^
 
 Since version ``2.0.0`` it is possible to use `black <https://github.com/python/black>`__ as the
 code formatter for Python code.
 
-``fix-format`` will use ``black`` automatically if it finds a ``pyproject.toml`` with a ``[tool.black]`` section in an
-ancestor directories of the filenames passed on the command-line.
+``fix-format`` will use ``black`` automatically if it finds a ``[tool.black]`` section declared in ``pyproject.toml``
+file.
 
 See "Converting master to black" below for details.
-
 
 Migrating a project to use fix-format
 -------------------------------------
