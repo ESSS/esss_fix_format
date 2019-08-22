@@ -239,7 +239,14 @@ def _process_file(filename, check, format_code, *, verbose):
     if is_cpp(filename):
         with io.open(filename, 'rb') as f:
             content_bytes = f.read()
-            content = content_bytes.decode('UTF-8')
+            try:
+                content = content_bytes.decode('UTF-8')
+            except UnicodeDecodeError:
+                msg = ': ERROR The file contents can not decoded using UTF-8'
+                error_msg = click.format_filename(filename) + msg
+                click.secho(error_msg, fg='red')
+                errors.append(error_msg)
+                return changed, errors, formatter
             # Remove all ASCII-characters, by substituting all printable ASCII-characters
             # with NULL character. Here, ' ' is the first printable ASCII-character (code 32)
             # and '~' is the last printable ASCII-character (code 126).
