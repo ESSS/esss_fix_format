@@ -242,7 +242,7 @@ def _process_file(filename, check, format_code, *, verbose):
             try:
                 content = content_bytes.decode('UTF-8')
             except UnicodeDecodeError:
-                msg = ': ERROR The file contents can not decoded using UTF-8'
+                msg = ': ERROR The file contents can not be decoded using UTF-8'
                 error_msg = click.format_filename(filename) + msg
                 click.secho(error_msg, fg='red')
                 errors.append(error_msg)
