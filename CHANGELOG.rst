@@ -2,6 +2,11 @@
 History
 =======
 
+2.1.1 (2019-08-23)
+------------------
+
+* Improve the error description when ``fix-format`` crash with non UTF-8 files.
+
 2.1.0 (2019-08-09)
 ------------------
 

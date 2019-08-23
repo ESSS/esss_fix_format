@@ -783,3 +783,16 @@ def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
     include_patterns = ['*.py']
     exclude_patterns = cli.read_exclude_patterns(config_file)
     assert not cli.should_format('drafts/foo.py', include_patterns, exclude_patterns)[0]
+
+
+def test_utf8_error_handling(tmpdir):
+    file_with_no_uft8 = tmpdir.join("test.cpp")
+    file_with_no_uft8.write('''é'''.encode('UTF-16'), 'wb')
+
+    check_utf8_error(file_with_no_uft8)
+
+
+def check_utf8_error(file):
+
+    output = run(['--check', '--verbose', str(file)], expected_exit=1)
+    output.fnmatch_lines(str(file) + ': ERROR The file contents can not be decoded using UTF-8')
