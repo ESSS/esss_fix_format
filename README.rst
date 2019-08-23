@@ -284,7 +284,7 @@ Fix format -> merge
 Developing
 ----------
 
-Create a conda environent (using Python 3 here) and install it in development mode.
+Create a conda environment (using Python 3 here) and install it in development mode.
 
 **Make sure you have conda configured to use ``conda-forge`` and ``esss`` conda channels.**
 
@@ -297,5 +297,14 @@ Create a conda environent (using Python 3 here) and install it in development mo
     $ pytest
 
 When implementing changes, please do it in a separate branch and open a PR.
+
+Releasing
+^^^^^^^^^
+
+The release is done internally at ESSS using our `conda-recipes` repository.
+
+
+License
+-------
 
 Licensed under the MIT license.
