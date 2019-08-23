@@ -789,14 +789,10 @@ def test_utf8_error_handling(tmpdir):
     file_with_no_uft8 = tmpdir.join("test.cpp")
     file_with_no_uft8.write('''é'''.encode('UTF-16'), 'wb')
 
-    file_with_uft8 = tmpdir.join("test2.cpp")
-    file_with_uft8.write('''e''', 'w')
-
     check_utf8_error(file_with_no_uft8)
-    check_valid_file(file_with_uft8, formatter='legacy formatter')
 
 
 def check_utf8_error(file):
 
     output = run(['--check', '--verbose', str(file)], expected_exit=1)
-    output.fnmatch_lines(str(file) + ': ERROR The file contents can not decoded using UTF-8')
+    output.fnmatch_lines(str(file) + ': ERROR The file contents can not be decoded using UTF-8')
