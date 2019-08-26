@@ -746,11 +746,11 @@ def test_exclude_patterns(tmp_path, monkeypatch):
         "tmp/*",
     ]
     '''
-
     config_file = tmp_path / 'pyproject.toml'
     config_file.write_text(config_content)
     include_patterns = ['*.cpp', '*.py']
     exclude_patterns = cli.read_exclude_patterns(config_file)
+    monkeypatch.chdir(tmp_path)
     assert not cli.should_format('src/drafts/foo.py', include_patterns, exclude_patterns)[0]
     assert cli.should_format('src/drafts/foo.cpp', include_patterns, exclude_patterns)[0]
     assert not cli.should_format('tmp/foo.cpp', include_patterns, exclude_patterns)[0]
@@ -783,6 +783,24 @@ def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
     include_patterns = ['*.py']
     exclude_patterns = cli.read_exclude_patterns(config_file)
     assert not cli.should_format('drafts/foo.py', include_patterns, exclude_patterns)[0]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="'subst' in only available on Windows")
+def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmpdir):
+    import subprocess
+    request.addfinalizer(lambda: subprocess.check_call(['subst', '/D', 'A:']))
+    subprocess.check_call(['subst', 'A:', str(tmp_path)])
+
+    config_content = '''[tool.esss_fix_format]
+    exclude = [
+        "src/drafts/*.py",
+        "tmp/*",
+    ]
+    '''
+    config_file = tmp_path / 'pyproject.toml'
+    config_file.write_text(config_content)
+    (tmp_path / 'foo.py').touch()
+    run(['A:', '--check'], expected_exit=0)
 
 
 def test_utf8_error_handling(tmpdir):

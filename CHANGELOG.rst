@@ -2,6 +2,11 @@
 History
 =======
 
+2.1.2 (2019-08-26)
+------------------
+
+* Fix error when running on a Windows mounted drive.
+
 2.1.1 (2019-08-23)
 ------------------
 

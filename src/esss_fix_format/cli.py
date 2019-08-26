@@ -58,7 +58,7 @@ def should_format(filename: str, include_patterns: Iterable[str], exclude_patter
     """
     from fnmatch import fnmatch
 
-    if any(fnmatch(filename, pattern) for pattern in exclude_patterns):
+    if any(fnmatch(os.path.abspath(filename), pattern) for pattern in exclude_patterns):
         return False, 'Excluded file'
 
     filename_no_ext, ext = os.path.splitext(filename)
@@ -88,7 +88,7 @@ def find_pyproject_toml(files_or_directories) -> Optional[Path]:
     """
     if not files_or_directories:
         return None
-    common = Path(os.path.commonpath(files_or_directories)).resolve()
+    common = Path(os.path.commonpath(files_or_directories)).absolute()
     for p in ([common] + list(common.parents)):
         fn = p / 'pyproject.toml'
         if fn.is_file():
@@ -107,10 +107,10 @@ def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
             f"pyproject.toml excludes option must be a list, got {type(excludes_option)})"
         )
 
-    # Fix exclude paths based on cwd (exclude paths are defined relative to TOML file)
-    cwd_relpath_from_toml = os.path.relpath(os.getcwd(), pyproject_toml.parent)
-    if cwd_relpath_from_toml != '.':
-        excludes_option = [p.replace(cwd_relpath_from_toml + '/', '', 1) for p in excludes_option]
+    def ensure_abspath(p):
+        return os.path.join(pyproject_toml.parent, p) if not os.path.isabs(p) else p
+
+    excludes_option = [ensure_abspath(p) for p in excludes_option]
     return excludes_option
 
 
