@@ -107,10 +107,10 @@ def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
             f"pyproject.toml excludes option must be a list, got {type(excludes_option)})"
         )
 
-    def ensure_abs(p):
+    def ensure_abspath(p):
         return os.path.join(pyproject_toml.parent, p) if not os.path.isabs(p) else p
 
-    excludes_option = [ensure_abs(p) for p in excludes_option]
+    excludes_option = [ensure_abspath(p) for p in excludes_option]
     return excludes_option
 
 
