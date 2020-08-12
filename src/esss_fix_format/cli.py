@@ -11,6 +11,7 @@ from typing import Optional, Tuple, Iterable, List
 import boltons.iterutils
 import click
 import pydevf
+from isort.exceptions import FileSkipComment
 
 CPP_PATTERNS = {
     '*.cpp',
@@ -313,8 +314,8 @@ def _process_file(filename, check, format_code, *, verbose):
 
     if extension == '.py':
         settings_path = os.path.abspath(os.path.dirname(filename))
-        settings_loaded = isort.settings.from_path(settings_path)
-        if settings_loaded['line_length'] < 80:
+        isort_config = isort.Config(settings_path=settings_path)
+        if isort_config.line_length < 80:
             # The default isort configuration has 79 chars, so, if the passed
             # does not have more than that, complain that .isort.cfg is not configured.
             msg = ': ERROR .isort.cfg not available in repository (or line_length config < 80).'
@@ -322,12 +323,10 @@ def _process_file(filename, check, format_code, *, verbose):
             click.secho(error_msg, fg='red')
             errors.append(error_msg)
 
-        sorter = isort.SortImports(file_contents=new_contents, settings_path=settings_path)
-        # On older versions if the entire file is skipped (eg.: by an "isort:skip_file")
-        # instruction in the docstring, SortImports doesn't even contain an "output" attribute.
-        # In some recent versions it is `None`.
-        new_contents = getattr(sorter, 'output', None)
-        if new_contents is None:
+        try:
+            new_contents = isort.code(new_contents, extension, config=isort_config)
+        except FileSkipComment:
+            # The entire file was skipped by an "isort:skip_file"
             new_contents = original_contents
 
         if format_code is not None:

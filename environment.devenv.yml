@@ -6,7 +6,7 @@ dependencies:
   - boltons
   - clangdev>=6.0.1
   - click>=6.0
-  - isort>=4.3.4
+  - isort>=5.0
   - python={{ '.'.join(CONDA_PY) }}
   - pydevf==0.1.5
   - toml>=0.8.0
