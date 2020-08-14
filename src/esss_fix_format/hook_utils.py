@@ -45,10 +45,10 @@ def add_hook(parts_dir, git_hook):
     :param GitHook|unicode git_hook: A git hook or its name. Name notation can only be used
         by hooks available by default though (see `hooks` to learn more).
     """
-    from esss_fix_format.hooks import GitHook
-    from esss_fix_format.hooks import get_default_hook
     import glob
     import stat
+
+    from esss_fix_format.hooks import GitHook, get_default_hook
 
     if not isinstance(git_hook, GitHook):
         git_hook = get_default_hook(git_hook)
@@ -76,8 +76,8 @@ def install_pre_commit_hook(git_dir=None):
     Install Git hooks in a project.
     """
     import stat
-    import textwrap
     import sys
+    import textwrap
 
     # Creates a pre-commit file that runs other scripts located in `_pre-commit-parts` folder.
     # This folder is (re)created every time hooks are installed. It runs all parts, even if one
