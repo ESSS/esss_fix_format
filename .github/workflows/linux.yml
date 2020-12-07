@@ -15,9 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - CONDA_PY: "36"
-          - CONDA_PY: "37"
+        CONDA_PY: ["36", "37"]
 
     steps:
     - uses: actions/checkout@v1
@@ -28,6 +26,8 @@ jobs:
         activate-environment: ''
     - name: Install
       shell: bash -l {0}
+      env:
+        CONDA_PY: ${{ matrix.CONDA_PY }}
       run: |
         conda config --system --set always_yes yes --set changeps1 no
         conda config --system --append channels conda-forge
