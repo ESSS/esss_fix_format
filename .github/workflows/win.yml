@@ -15,7 +15,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        CONDA_PY: ["36", "37"]
+        include:
+          - CONDA_PY: "36"
+          - CONDA_PY: "37"
 
     steps:
     - uses: actions/checkout@v1
