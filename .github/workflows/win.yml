@@ -34,6 +34,7 @@ jobs:
         conda info -a
         conda devenv
     - name: Tests
+      shell: cmd
       run: |
         call activate esss-fix-format-py${{ matrix.CONDA_PY }}
         conda info -a
