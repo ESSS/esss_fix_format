@@ -24,6 +24,8 @@ jobs:
       with:
         auto-activate-base: true
         activate-environment: ''
+        channels: conda-forge,esss
+        channel-priority: true
     - name: Install
       env:
         CONDA_PY: ${{ matrix.CONDA_PY }}
