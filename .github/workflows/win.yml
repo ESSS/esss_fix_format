@@ -24,6 +24,7 @@ jobs:
       with:
         auto-activate-base: false
         miniconda-version: '4.8.3'
+        conda-version: '4.8.3'
         activate-environment: ''
         channels: conda-forge,esss
         channel-priority: true
