@@ -35,6 +35,7 @@ jobs:
         conda devenv
     - name: Tests
       run: |
+        conda init powershell
         conda activate esss-fix-format-py${{ matrix.CONDA_PY }}
         Get-Item Env:PYTHONPATH
         where python
