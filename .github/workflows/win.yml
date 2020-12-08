@@ -37,8 +37,8 @@ jobs:
     - name: Tests
       shell: cmd
       run: |
-        conda activate esss-fix-format-py${{ matrix.CONDA_PY }}
-        flake8 src tests
-        rst-lint CHANGELOG.rst README.rst
-        pytest XXXXX.py
-        fix-format -k .
+        conda activate esss-fix-format-py${{ matrix.CONDA_PY }} || goto :eof 
+        flake8 src tests || goto :eof
+        rst-lint CHANGELOG.rst README.rst || goto :eof
+        pytest XXXXX.py || goto :eof
+        fix-format -k . || goto :eof
