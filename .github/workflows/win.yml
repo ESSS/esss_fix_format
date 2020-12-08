@@ -40,5 +40,5 @@ jobs:
         call conda activate esss-fix-format-py${{ matrix.CONDA_PY }} || goto :eof 
         flake8 src tests || goto :eof
         rst-lint CHANGELOG.rst README.rst || goto :eof
-        pytest XXXXX.py || goto :eof
+        pytest || goto :eof
         fix-format -k . || goto :eof
