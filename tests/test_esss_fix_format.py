@@ -800,7 +800,7 @@ def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmpdir):
     config_file = tmp_path / 'pyproject.toml'
     config_file.write_text(config_content)
     (tmp_path / 'foo.py').touch()
-    run(['A:', '--check'], expected_exit=0)
+    run(['Z:', '--check'], expected_exit=0)
 
 
 def test_utf8_error_handling(tmpdir):
