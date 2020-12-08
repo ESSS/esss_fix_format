@@ -788,8 +788,8 @@ def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
 @pytest.mark.skipif(os.name != "nt", reason="'subst' in only available on Windows")
 def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmpdir):
     import subprocess
-    request.addfinalizer(lambda: subprocess.check_call(['subst', '/D', 'A:']))
-    subprocess.check_call(['subst', 'A:', str(tmp_path)])
+    request.addfinalizer(lambda: subprocess.check_call(['subst', '/D', 'Z:']))
+    subprocess.check_call(['subst', 'Z:', str(tmp_path)])
 
     config_content = '''[tool.esss_fix_format]
     exclude = [
