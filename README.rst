@@ -2,6 +2,11 @@
 esss_fix_format
 ===============================
 
+.. image:: https://github.com/ESSS/esss_fix_format/workflows/linux/badge.svg
+  :target: https://github.com/ESSS/esss_fix_format/actions?query=workflow%3Alinux
+
+.. image:: https://github.com/ESSS/esss_fix_format/workflows/windows/badge.svg
+  :target: https://github.com/ESSS/esss_fix_format/actions?query=workflow%3Awindows
 
 Simple code formatter and pre-commit checker used internally by ESSS.
 
