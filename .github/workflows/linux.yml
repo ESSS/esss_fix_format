@@ -24,6 +24,8 @@ jobs:
         auto-update-conda: true
         auto-activate-base: true
         activate-environment: ''
+        channels: conda-forge,esss
+        channel-priority: true
     - name: Install
       shell: bash -l {0}
       env:
