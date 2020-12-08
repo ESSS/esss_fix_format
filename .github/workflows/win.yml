@@ -35,8 +35,7 @@ jobs:
         conda devenv
     - name: Tests
       run: |
-        conda init powershell
-        conda activate esss-fix-format-py${{ matrix.CONDA_PY }}
+        call activate esss-fix-format-py${{ matrix.CONDA_PY }}
         conda info -a
         flake8 src tests
         rst-lint CHANGELOG.rst README.rst
