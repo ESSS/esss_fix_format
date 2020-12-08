@@ -32,8 +32,6 @@ jobs:
         CONDA_PY: ${{ matrix.CONDA_PY }}
       run: |
         conda config --system --set always_yes yes --set changeps1 no
-        conda config --system --append channels conda-forge
-        conda config --system --append channels esss
         conda install -c conda-forge conda-devenv
         conda info -a
         conda devenv
