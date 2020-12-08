@@ -36,7 +36,7 @@ jobs:
     - name: Tests
       run: |
         conda activate esss-fix-format-py${{ matrix.CONDA_PY }}
-        echo PYTHONPATH=%PYTHONPATH%
+        Get-Item Env:PYTHONPATH
         where python
         conda info -a
         flake8 src tests
