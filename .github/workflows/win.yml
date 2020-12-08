@@ -37,8 +37,6 @@ jobs:
       run: |
         conda init powershell
         conda activate esss-fix-format-py${{ matrix.CONDA_PY }}
-        Get-Item Env:PYTHONPATH
-        where python
         conda info -a
         flake8 src tests
         rst-lint CHANGELOG.rst README.rst
