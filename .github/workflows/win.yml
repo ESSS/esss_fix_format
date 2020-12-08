@@ -1,0 +1,43 @@
+name: windows
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        CONDA_PY: ["36", "37"]
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-activate-base: false
+        activate-environment: ''
+        channels: conda-forge,esss
+        channel-priority: true
+    - name: Install
+      env:
+        CONDA_PY: ${{ matrix.CONDA_PY }}
+      run: |
+        conda config --system --set always_yes yes --set changeps1 no
+        conda install -c conda-forge conda-devenv
+        conda info -a
+        conda devenv
+    - name: Tests
+      shell: cmd
+      run: |
+        call conda activate esss-fix-format-py${{ matrix.CONDA_PY }} || goto :eof 
+        flake8 src tests || goto :eof
+        rst-lint CHANGELOG.rst README.rst || goto :eof
+        pytest || goto :eof
+        fix-format -k . || goto :eof
