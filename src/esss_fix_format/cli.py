@@ -3,10 +3,11 @@ import codecs
 import io
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional, Tuple, Iterable, List
+from typing import Optional, Tuple, Iterable, List, Set
 
 import boltons.iterutils
 import click
@@ -399,6 +400,34 @@ def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[
     return would_be_formatted, black_failed
 
 
+def get_git_ignored_files(directory: Path) -> Set[Path]:
+    """Return a set() of git-ignored files if ``directory`` is tracked by git."""
+    try:
+        output = subprocess.check_output(
+            [
+                shutil.which("git"),
+                "status",
+                "--ignored",
+                "--untracked-files=all",
+                "--porcelain=2",
+                str(directory),
+            ],
+            encoding="UTF-8",
+        )
+    except subprocess.CalledProcessError:
+        # Assume we are not in a directory tracked by git (should be rare in practice).
+        return set()
+    else:
+        result = set()
+        for line in output.splitlines():
+            if line.startswith("!"):
+                # Use os.path.abspath() because it also normalizes the path,
+                # something which Path() doesn't do for us.
+                p = Path(os.path.abspath(line[1:].strip()))
+                result.add(p)
+        return result
+
+
 def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, verbose):
     if stdin:
         files = [x.strip() for x in click.get_text_stream('stdin').readlines()]
@@ -408,12 +437,15 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
         files = []
         for file_or_dir in files_or_directories:
             if os.path.isdir(file_or_dir):
+                git_ignored = get_git_ignored_files(file_or_dir)
                 for root, dirs, names in os.walk(file_or_dir):
                     for dirname in list(dirs):
                         if dirname in SKIP_DIRS:
                             dirs.remove(dirname)
                     files.extend(
-                        os.path.join(root, n) for n in names if should_format(n, PATTERNS, [])
+                        os.path.join(root, n) for n in names
+                        if should_format(n, PATTERNS, [])
+                        and Path(root, n).absolute() not in git_ignored
                     )
             else:
                 files.append(file_or_dir)

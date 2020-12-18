@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import textwrap
+from pathlib import Path
 
 import mock
 import pytest
@@ -765,6 +766,39 @@ def test_invalid_exclude_patterns(tmp_path):
     config_file = tmp_path / 'pyproject.toml'
     config_file.write_text(config_content)
     pytest.raises(TypeError, cli.read_exclude_patterns, config_file)
+
+
+def test_git_ignored_files(tmp_path):
+    # Smoke test for the get_git_ignored_files() function
+    root = Path(__file__).parent.parent
+    assert root.joinpath(".git").is_dir()
+    ignored = cli.get_git_ignored_files(root)
+    assert root.joinpath("environment.yml") in ignored
+
+    # tmp_path is not tracked by git
+    assert cli.get_git_ignored_files(tmp_path) == set()
+
+
+def test_git_ignored_files_integration(tmp_path, monkeypatch, sort_cfg_to_tmpdir):
+    # Write a file which is not properly formatted.
+    content = textwrap.dedent("""
+        x = [1,
+        2,
+            3,
+            ]
+    """)
+    fn = tmp_path.joinpath("foo.py")
+    fn.write_text(content)
+
+    tmp_path.joinpath('pyproject.toml').write_text('[tool.black]')
+
+    # Mock get_git_ignored_files() to ignore the badly formatted file.
+    monkeypatch.setattr(cli, "get_git_ignored_files", lambda p: {fn})
+    monkeypatch.chdir(tmp_path)
+    run([str(".")], expected_exit=0)
+
+    # Ensure the file has been properly ignored.
+    assert fn.read_text() == content
 
 
 def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):

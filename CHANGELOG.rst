@@ -2,6 +2,12 @@
 History
 =======
 
+3.1.0 (2020-12-18)
+------------------
+
+* Files ignored by git are also ignored by fix-format when paths are given explicitly
+  in the command-line.
+
 3.0.0 (2020-08-14)
 ------------------
 
