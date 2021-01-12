@@ -198,10 +198,14 @@ The first step is converting your ``master`` branch to black.
 
    .. code-block:: ini
 
-      multi_line_output=3
-      include_trailing_comma=True
-      force_grid_wrap=0
-
+      [settings]
+      profile=black
+      no_sections=True
+      force_alphabetical_sort=True
+   
+   This will use black-like grouping, and clump imports together regardless if they are standard library, 
+   third party, or local. This avoids getting different results if you have a different environment activated,
+   or commiting from an IDE.  
 
 5. Commit, and save the commit hash, possible in a task that you created for this conversion:
 
