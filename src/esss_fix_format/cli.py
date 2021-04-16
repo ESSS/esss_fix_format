@@ -21,6 +21,7 @@ CPP_PATTERNS = {
     '*.hpp',
     '*.hxx',
     '*.cxx',
+    '*.cu',
 }
 
 PATTERNS = {
