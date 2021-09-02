@@ -193,8 +193,13 @@ The first step is converting your ``master`` branch to black.
       line-length = 100
       skip-string-normalization = true
 
-2. Your root directory should have a ``.isort.cfg`` file with the same contents as one in the root of this
-   repository, add those lines:
+2. If your project doesn't have a ``.isort.cfg`` file, create one at the project's *repository*
+   root with the same contents as [the one](https://github.com/ESSS/esss_fix_format/blob/master/.isort.cfg)
+   in the root of this repository.
+   
+3. Run the ``upsert_isort_config`` task to update it (it should be run regularly, specially when adding new
+   dependencies to internal projects, known as "first party" dependencies); *or*, if the project needs special
+   configurations due to dual package and source modes, add these lines (and do not run ``upsert_isort_config``):
 
    .. code-block:: ini
 
@@ -205,22 +210,22 @@ The first step is converting your ``master`` branch to black.
    
    This will use black-like grouping, and clump imports together regardless if they are standard library, 
    third party, or local. This avoids getting different results if you have a different environment activated,
-   or commiting from an IDE.  
+   or commiting from an IDE.
 
-5. Commit, and save the commit hash, possible in a task that you created for this conversion:
+4. Commit, and save the commit hash, possible in a task that you created for this conversion:
 
    .. code-block:: sh
 
       $ git commit -anm "Add configuration files for black"
 
 
-3. Execute on the root of the repository:
+5. Execute on the root of the repository:
 
    .. code-block:: sh
 
       $ fix-format .
 
-4. Ensure everything is fine:
+6. Ensure everything is fine:
 
    .. code-block:: sh
 
@@ -228,7 +233,7 @@ The first step is converting your ``master`` branch to black.
 
    If you **don't** see any "reformatting" messages, it means everything is formatted correctly.
 
-5. Commit and then open a PR:
+7. Commit and then open a PR:
 
    .. code-block:: sh
 
