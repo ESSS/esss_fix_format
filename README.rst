@@ -194,7 +194,7 @@ The first step is converting your ``master`` branch to black.
       skip-string-normalization = true
 
 2. If your project doesn't have a ``.isort.cfg`` file, create one at the project's *repository*
-   root with the same contents as [the one](https://github.com/ESSS/esss_fix_format/blob/master/.isort.cfg)
+   root with the same contents as `the one <https://github.com/ESSS/esss_fix_format/blob/master/.isort.cfg>`_
    in the root of this repository.
    
 3. Run the ``upsert-isort-config`` task to update it (it should be run regularly, specially when adding new
