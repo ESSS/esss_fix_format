@@ -105,9 +105,10 @@ def find_pyproject_toml(files_or_directories) -> Optional[Path]:
 
 
 def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
-    import toml
+    import tomli
 
-    toml_contents = toml.load(pyproject_toml)
+    with pyproject_toml.open("rb") as f:
+        toml_contents = tomli.load(f)
     ff_options = toml_contents.get("tool", {}).get("esss_fix_format", {})
     excludes_option = ff_options.get("exclude", [])
     if not isinstance(excludes_option, list):
