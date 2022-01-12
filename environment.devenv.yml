@@ -9,16 +9,14 @@ dependencies:
   - isort>=5.0
   - python={{ '.'.join(CONDA_PY) }}
   - pydevf==0.1.5
-  - toml>=0.8.0
+  - tomli
 
   # develop
   - black
-  - flake8>=3.5.0
-  - mock>=1.0.1
+  - pre-commit
   - pygments>=2.2.0
   - pytest>=3.8.0
   - pytest-mock>=1.10.0
-  - restructuredtext_lint
 
 environment:
   PYTHONPATH:

@@ -25,7 +25,7 @@ def find_ancestor_dir_with(filename, begin_in=None):
         if not current_dir_name:
             return None
         if not parent_base_directory:
-            raise RuntimeError(f'Unable to find .git in the {begin_in} hierarchy.')
+            raise RuntimeError(f"Unable to find .git in the {begin_in} hierarchy.")
         base_directory = parent_base_directory
 
 
@@ -53,12 +53,12 @@ def add_hook(parts_dir, git_hook):
     if not isinstance(git_hook, GitHook):
         git_hook = get_default_hook(git_hook)
 
-    count = len(glob.glob(f'{parts_dir}/*'))
-    part_path = os.path.join(parts_dir, '{:05d}_{}'.format(count + 1, git_hook.name()))
-    with io.open(part_path, 'w', newline='') as f:
+    count = len(glob.glob(f"{parts_dir}/*"))
+    part_path = os.path.join(parts_dir, "{:05d}_{}".format(count + 1, git_hook.name()))
+    with io.open(part_path, "w", newline="") as f:
         f.write("#!/bin/bash\n")
         f.write("\n")
-        f.write('echo \u001b[34mHook {} in progress ....\u001b[0m\n'.format(git_hook.name()))
+        f.write("echo \u001b[34mHook {} in progress ....\u001b[0m\n".format(git_hook.name()))
         f.write(git_hook.script())
 
     os.chmod(part_path, os.stat(part_path).st_mode | stat.S_IXUSR)
@@ -68,7 +68,7 @@ def add_default_pre_commit_hooks(pre_commit_parts_dir):
     """
     :param unicode pre_commit_parts_dir: Folder containing hook files.
     """
-    add_hook(pre_commit_parts_dir, 'fix-format')
+    add_hook(pre_commit_parts_dir, "fix-format")
 
 
 def install_pre_commit_hook(git_dir=None):
@@ -82,31 +82,33 @@ def install_pre_commit_hook(git_dir=None):
     # Creates a pre-commit file that runs other scripts located in `_pre-commit-parts` folder.
     # This folder is (re)created every time hooks are installed. It runs all parts, even if one
     # of them fails. If any part fails, pre-commit exits as failure.
-    git_root = find_ancestor_dir_with('.git', git_dir)
+    git_root = find_ancestor_dir_with(".git", git_dir)
 
     git_root = os.path.abspath(git_root)
     project_name = os.path.basename(git_root)
-    print(f'{project_name} hooks')
+    print(f"{project_name} hooks")
 
-    if not os.path.exists(os.path.join(git_root, '.git')):
-        raise ValueError('Expected to find: {}'.format(os.path.join(git_root, '.git')))
+    if not os.path.exists(os.path.join(git_root, ".git")):
+        raise ValueError("Expected to find: {}".format(os.path.join(git_root, ".git")))
 
-    pre_commit_file = os.path.join(git_root, '.git', 'hooks', 'pre-commit')
+    pre_commit_file = os.path.join(git_root, ".git", "hooks", "pre-commit")
 
     # when the repository is from a submodule, ".git" is actually a file; in that case we skip hook
     # installation
     # this was encountered when building the etk-simbr package
-    if os.path.isfile(os.path.join(git_root, '.git')):
-        print('Skipping hook installation, %s is a file' % os.path.join(git_root, '.git'))
+    if os.path.isfile(os.path.join(git_root, ".git")):
+        print("Skipping hook installation, %s is a file" % os.path.join(git_root, ".git"))
         return
 
-    pre_commit_parts_dir = os.path.join(git_root, '.git', 'hooks', '_pre-commit-parts')
+    pre_commit_parts_dir = os.path.join(git_root, ".git", "hooks", "_pre-commit-parts")
     if os.path.isdir(pre_commit_parts_dir):
         import shutil
+
         shutil.rmtree(pre_commit_parts_dir)
     os.makedirs(pre_commit_parts_dir)
 
-    pre_commit_contents = textwrap.dedent("""\
+    pre_commit_contents = textwrap.dedent(
+        """\
         #!/bin/bash
         # installed automatically by the "hooks" task, changes will be lost!
 
@@ -122,13 +124,14 @@ def install_pre_commit_hook(git_dir=None):
             fi
         done
         exit $globalreturncode
-    """)
+    """
+    )
 
-    with io.open(pre_commit_file, 'w', newline='') as f:
+    with io.open(pre_commit_file, "w", newline="") as f:
         f.write(pre_commit_contents)
 
     add_default_pre_commit_hooks(pre_commit_parts_dir)
 
-    if sys.platform.startswith('linux'):
+    if sys.platform.startswith("linux"):
         os.chmod(pre_commit_file, os.stat(pre_commit_file).st_mode | stat.S_IXUSR)
-    print('Pre-commit hook installed: %s' % pre_commit_file)
+    print("Pre-commit hook installed: %s" % pre_commit_file)
