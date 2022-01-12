@@ -300,7 +300,7 @@ Create a conda environment (using Python 3 here) and install it in development m
     $ conda install -n base conda-devenv
     $ conda devenv
     $ source activate esss-fix-format-py36
-    $ fix-format --git-hooks
+    $ pre-commit install
     $ pytest
 
 When implementing changes, please do it in a separate branch and open a PR.
