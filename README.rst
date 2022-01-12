@@ -196,7 +196,7 @@ The first step is converting your ``master`` branch to black.
 2. If your project doesn't have a ``.isort.cfg`` file, create one at the project's *repository*
    root with the same contents as `the one <https://github.com/ESSS/esss_fix_format/blob/master/.isort.cfg>`_
    in the root of this repository.
-   
+
 3. Run the ``upsert-isort-config`` task to update it (it should be run regularly, specially when adding new
    dependencies to internal projects, known as "first party" dependencies); *or*, if the project needs special
    configurations due to dual package and source modes, add these lines (and do not run ``upsert-isort-config``):
@@ -207,8 +207,8 @@ The first step is converting your ``master`` branch to black.
       profile=black
       no_sections=True
       force_alphabetical_sort=True
-   
-   This will use black-like grouping, and clump imports together regardless if they are standard library, 
+
+   This will use black-like grouping, and clump imports together regardless if they are standard library,
    third party, or local. This avoids getting different results if you have a different environment activated,
    or commiting from an IDE.
 

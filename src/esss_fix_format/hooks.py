@@ -30,7 +30,7 @@ class FixFormatGitHook(GitHook):
     """
 
     def name(self):
-        return 'fix-format'
+        return "fix-format"
 
     def script(self):
         script = """\
