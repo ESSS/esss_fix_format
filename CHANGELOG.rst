@@ -2,8 +2,8 @@
 History
 =======
 
-3.2.0 (upcoming)
-----------------
+3.2.0 (2021-01-12)
+------------------
 
 * Add support to .cu (CUDA) files.
 * When running ``black`` on a large number of files, pass all files at once on Linux. Previously ``esss_fix_format`` would
