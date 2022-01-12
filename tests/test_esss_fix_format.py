@@ -719,11 +719,11 @@ def test_skip_git_directory(input_file, tmp_path):
     output.fnmatch_lines(['fix-format: 1 files changed, 0 files left unchanged.'])
 
 
-def test_black_operates_on_chunks(tmp_path, mocker, sort_cfg_to_tmpdir):
-    """Ensure black is being called in chunks of at most 100 files.
+def test_black_operates_on_chunks_on_windows(tmp_path, mocker, sort_cfg_to_tmpdir):
+    """Ensure black is being called in chunks of at most 100 files on Windows.
 
-    On Windows there's a limit on command-line size, so we call black in chunks there. This should
-    only happen on converting entire repositories, not in day to day use.
+    On Windows there's a limit on command-line size, so we call black in chunks there. On Linux
+    we don't have this problem, so we always pass all files at once.
     """
     (tmp_path / 'pyproject.toml').write_text('[tool.black]')
     for i in range(521):
@@ -737,7 +737,11 @@ def test_black_operates_on_chunks(tmp_path, mocker, sort_cfg_to_tmpdir):
         'fix-format: 521 files would be left unchanged.'
     ])
     call_list = subprocess.call.call_args_list
-    assert len(call_list) == 6  # 521 files in batches of 100
+    if sys.platform.startswith("win"):
+        expected = 6  # 521 files in batches of 100.
+    else:
+        expected = 1  # All files are passed at once.
+    assert len(call_list) == expected
 
 
 def test_exclude_patterns(tmp_path, monkeypatch):
