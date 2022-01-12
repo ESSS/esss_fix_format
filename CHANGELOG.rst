@@ -2,10 +2,12 @@
 History
 =======
 
-3.1.1 (upcoming)
-------------------
+3.2.0 (upcoming)
+----------------
 
 * Add support to .cu (CUDA) files.
+* When running ``black`` on a large number of files, pass all files at once on Linux. Previously ``esss_fix_format`` would
+  pass files in chunks due to a limitation in Windows command-line size, but now that workaround is done in Windows only.
 
 3.1.0 (2020-12-18)
 ------------------

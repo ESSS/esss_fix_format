@@ -381,17 +381,23 @@ def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[
             click.secho(f'Checking black on {len(py_files)} files...', fg='cyan')
         else:
             click.secho(f'Running black on {len(py_files)} files...', fg='cyan')
-        # on Windows there's a limit on the command-line size, so we call black in batches
+        # On Windows there's a limit on the command-line size, so we call black in batches
         # this should only be an issue when executing fix-format over the entire repository,
-        # not on day to day usage
-        chunk_size = 100
-        for chunked_files in boltons.iterutils.chunked(py_files, chunk_size):
+        # not on day to day usage.
+        # Once black grows a public API (https://github.com/psf/black/issues/779), we can
+        # ditch running things in a subprocess altogether.
+        if sys.platform.startswith("win"):
+            chunk_size = 100
+            file_iterator = boltons.iterutils.chunked(py_files, chunk_size)
+        else:
+            file_iterator = iter([py_files])
+        for files in file_iterator:
             args = ['black']
             if check:
                 args.append('--check')
             if verbose:
                 args.append('--verbose')
-            args.extend(str(x) for x in chunked_files)
+            args.extend(str(x) for x in files)
             status = subprocess.call(args)
             if not black_failed:
                 black_failed = not check and status != 0
