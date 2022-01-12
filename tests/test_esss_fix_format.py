@@ -7,7 +7,6 @@ import sys
 import textwrap
 from pathlib import Path
 
-import mock
 import pytest
 from click.testing import CliRunner
 
@@ -252,10 +251,10 @@ def test_fix_commit(input_file, mocker, param, tmpdir):
     output = run([param, "--verbose"], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ": Fixed")
     assert m.call_args_list == [
-        mock.call("git rev-parse --show-toplevel", shell=True),
-        mock.call("git diff --name-only --diff-filter=ACM --staged", shell=True),
-        mock.call("git diff --name-only --diff-filter=ACM", shell=True),
-        mock.call("git ls-files -o --full-name --exclude-standard", shell=True),
+        mocker.call("git rev-parse --show-toplevel", shell=True),
+        mocker.call("git diff --name-only --diff-filter=ACM --staged", shell=True),
+        mocker.call("git diff --name-only --diff-filter=ACM", shell=True),
+        mocker.call("git ls-files -o --full-name --exclude-standard", shell=True),
     ]
 
 
