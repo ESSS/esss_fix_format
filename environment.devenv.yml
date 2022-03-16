@@ -11,6 +11,9 @@ dependencies:
   - pydevf==0.1.5
   - tomli
 
+  # Last version which still supports Python 3.6.
+  - platformdirs <=2.4
+
   # develop
   - black
   - pre-commit
