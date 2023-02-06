@@ -859,6 +859,5 @@ def test_utf8_error_handling(tmpdir):
 
 
 def check_utf8_error(file):
-
     output = run(["--check", "--verbose", str(file)], expected_exit=1)
     output.fnmatch_lines(str(file) + ": ERROR The file contents can not be decoded using UTF-8")
