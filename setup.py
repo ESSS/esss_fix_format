@@ -12,7 +12,7 @@ requirements = [
     "black",
     "click>=6.0",
     "isort",
-    "toml>=0.8.0",
+    "tomli",
 ]
 
 setup(
