@@ -6,15 +6,19 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
+from typing import Optional
+from typing import Sequence
 
 import pytest
+from _pytest.pytester import LineMatcher
 from click.testing import CliRunner
+from pytest_mock import MockerFixture
 
 from esss_fix_format import cli
 
 
 @pytest.fixture
-def sort_cfg_to_tmp(tmp_path):
+def sort_cfg_to_tmp(tmp_path: Path) -> None:
     import shutil
 
     shutil.copyfile(
@@ -23,7 +27,7 @@ def sort_cfg_to_tmp(tmp_path):
 
 
 @pytest.fixture
-def dot_clang_format_to_tmp(tmp_path):
+def dot_clang_format_to_tmp(tmp_path: Path) -> None:
     import shutil
 
     shutil.copyfile(
@@ -33,7 +37,7 @@ def dot_clang_format_to_tmp(tmp_path):
 
 
 @pytest.fixture
-def input_file(tmp_path, sort_cfg_to_tmp):
+def input_file(tmp_path: Path, sort_cfg_to_tmp: None) -> Path:
     # imports out-of-order included in example so isort detects as necessary to change
     source = textwrap.dedent(
         """\
@@ -62,13 +66,13 @@ def input_file(tmp_path, sort_cfg_to_tmp):
 
 
 @pytest.fixture(autouse=True)
-def black_config(tmp_path):
+def black_config(tmp_path: Path) -> Path:
     fn = tmp_path.joinpath("pyproject.toml")
     fn.write_text("[tool.black]\nline-length = 100")
     return fn
 
 
-def test_command_line_interface(input_file):
+def test_command_line_interface(input_file: Path) -> None:
     check_invalid_file(input_file)
     fix_invalid_file(input_file)
 
@@ -76,13 +80,13 @@ def test_command_line_interface(input_file):
     fix_valid_file(input_file)
 
 
-def test_no_black_config(input_file, black_config):
+def test_no_black_config(input_file: Path, black_config: Path) -> None:
     os.remove(str(black_config))
     output = run(["--check", "--verbose", str(input_file)], expected_exit=1)
     output.fnmatch_lines("pyproject.toml not found or not configured for black.")
 
 
-def test_directory_command_line(input_file, tmp_path):
+def test_directory_command_line(input_file: Path, tmp_path: Path) -> None:
     another_file = tmp_path.joinpath("subdir", "test2.py")
     another_file.parent.mkdir(parents=True)
     shutil.copy(input_file, another_file)
@@ -98,14 +102,14 @@ def test_directory_command_line(input_file, tmp_path):
 
 
 @pytest.mark.xfail(reason="this is locking up during main(), but works on the cmdline", run=False)
-def test_stdin_input(input_file):
+def test_stdin_input(input_file: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(cli.main, args=["--stdin"], input=str(input_file) + "\n")
     assert result.exit_code == 0
     assert str(input_file) in result.output
 
 
-def test_fix_whitespace(input_file):
+def test_fix_whitespace(input_file: Path) -> None:
     obtained = cli.fix_whitespace(input_file.read_text().splitlines(), eol="\n", ends_with_eol=True)
     expected = textwrap.dedent(
         """\
@@ -128,7 +132,7 @@ def test_fix_whitespace(input_file):
     assert obtained == expected
 
 
-def test_imports(tmp_path, sort_cfg_to_tmp):
+def test_imports(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     source = textwrap.dedent(
         """\
         import pytest
@@ -143,8 +147,8 @@ def test_imports(tmp_path, sort_cfg_to_tmp):
     filename = tmp_path.joinpath("test.py")
     filename.write_text(source)
 
-    check_invalid_file(str(filename))
-    fix_invalid_file(str(filename))
+    check_invalid_file(filename)
+    fix_invalid_file(filename)
 
     expected = textwrap.dedent(
         """\
@@ -163,7 +167,7 @@ def test_imports(tmp_path, sort_cfg_to_tmp):
 
 
 @pytest.mark.parametrize("verbose", [True, False])
-def test_verbosity(tmp_path, input_file, verbose):
+def test_verbosity(tmp_path: Path, input_file: Path, verbose: bool) -> None:
     # already in tmp_path: a py file incorrectly formatted and .isort.cfg
     # prepare extra files: a CPP file and a py file already properly formatted
     isort_fn = tmp_path / ".isort.cfg"
@@ -233,7 +237,7 @@ def test_verbosity(tmp_path, input_file, verbose):
     output.fnmatch_lines(expected_lines)
 
 
-def test_filename_without_wildcard(tmp_path, sort_cfg_to_tmp):
+def test_filename_without_wildcard(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     filename = tmp_path / "CMakeLists.txt"
     filename.write_text("\t#\n")
     output = run([str(filename), "--verbose"], expected_exit=0)
@@ -241,15 +245,13 @@ def test_filename_without_wildcard(tmp_path, sort_cfg_to_tmp):
 
 
 @pytest.mark.parametrize("param", ["-c", "--commit"])
-def test_fix_commit(input_file, mocker, param, tmp_path):
-    def check_output(cmd, *args, **kwargs):
+def test_fix_commit(input_file: Path, mocker: MockerFixture, param: str, tmp_path: Path) -> None:
+    def check_output(cmd: str, *_: object, **__: object) -> bytes:
         if "--show-toplevel" in cmd:
             result = str(tmp_path) + "\n"
         else:
             result = input_file.name + "\n"
-        if sys.version_info[0] > 2:
-            result = os.fsencode(result)
-        return result
+        return os.fsencode(result)
 
     m = mocker.patch.object(subprocess, "check_output", side_effect=check_output)
     output = run([param, "--verbose"], expected_exit=0)
@@ -262,7 +264,7 @@ def test_fix_commit(input_file, mocker, param, tmp_path):
     ]
 
 
-def test_input_invalid_codec(tmp_path, sort_cfg_to_tmp):
+def test_input_invalid_codec(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     """Display error summary when we fail to open a file"""
     filename = tmp_path / "test.py"
     filename.write_bytes("hello world".encode("UTF-16"))
@@ -272,7 +274,7 @@ def test_input_invalid_codec(tmp_path, sort_cfg_to_tmp):
     output.fnmatch_lines(str(filename) + ": ERROR (Unicode*")
 
 
-def test_empty_file(tmp_path, sort_cfg_to_tmp):
+def test_empty_file(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     """Ensure files with a single empty line do not raise an error"""
     filename = tmp_path / "test.py"
     filename.write_text("\r\n")
@@ -287,7 +289,9 @@ def test_empty_file(tmp_path, sort_cfg_to_tmp):
         (None, 1),
     ],
 )
-def test_ignore_jupytext(tmp_path, sort_cfg_to_tmp, notebook_content, expected_exit):
+def test_ignore_jupytext(
+    tmp_path: Path, sort_cfg_to_tmp: None, notebook_content: str, expected_exit: int
+) -> None:
     if notebook_content is not None:
         filename_ipynb = tmp_path / "test.ipynb"
         filename_ipynb.write_text(notebook_content, "UTF-8")
@@ -328,7 +332,7 @@ def test_ignore_jupytext(tmp_path, sort_cfg_to_tmp, notebook_content, expected_e
 
 
 @pytest.mark.parametrize("check", [True, False])
-def test_python_with_bom(tmp_path, sort_cfg_to_tmp, check):
+def test_python_with_bom(tmp_path: Path, sort_cfg_to_tmp: None, check: bool) -> None:
     filename = tmp_path / "test.py"
     original_contents = codecs.BOM_UTF8 + b"import io\r\n"
     filename.write_bytes(original_contents)
@@ -359,7 +363,7 @@ def test_python_with_bom(tmp_path, sort_cfg_to_tmp, check):
         "module-level isort:skip_file comment",
     ],
 )
-def test_skip_entire_file(tmp_path, sort_cfg_to_tmp, source):
+def test_skip_entire_file(tmp_path: Path, sort_cfg_to_tmp: None, source: str) -> None:
     filename = tmp_path / "test.py"
     filename.write_text(source)
     output = run([str(filename), "--verbose"], expected_exit=0)
@@ -367,7 +371,7 @@ def test_skip_entire_file(tmp_path, sort_cfg_to_tmp, source):
     assert filename.read_text() == source
 
 
-def test_isort_bug_with_comment_headers(tmp_path, sort_cfg_to_tmp):
+def test_isort_bug_with_comment_headers(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     source = textwrap.dedent(
         """\
         '''
@@ -392,7 +396,7 @@ def test_isort_bug_with_comment_headers(tmp_path, sort_cfg_to_tmp):
     check_valid_file(filename)
 
 
-def test_missing_builtins(tmp_path, sort_cfg_to_tmp):
+def test_missing_builtins(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     source = textwrap.dedent(
         """\
         import thirdparty
@@ -418,7 +422,7 @@ def test_missing_builtins(tmp_path, sort_cfg_to_tmp):
     )
 
 
-def test_no_isort_cfg(tmp_path):
+def test_no_isort_cfg(tmp_path: Path) -> None:
     filename = tmp_path / "test.py"
     filename.write_text("import os")
     try:
@@ -435,7 +439,7 @@ def test_no_isort_cfg(tmp_path):
     )
 
 
-def test_isort_cfg_in_parent(tmp_path, monkeypatch):
+def test_isort_cfg_in_parent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """
     This test checks that a configuration file is properly read from a parent directory.
     This need to be checked because isort itself can fail to do this when passed a relative path.
@@ -471,7 +475,7 @@ def test_isort_cfg_in_parent(tmp_path, monkeypatch):
     assert obtained == expected
 
 
-def test_install_pre_commit_hook(tmp_path):
+def test_install_pre_commit_hook(tmp_path: Path) -> None:
     tmp_path.joinpath(".git").mkdir()
 
     from esss_fix_format import hook_utils
@@ -480,14 +484,16 @@ def test_install_pre_commit_hook(tmp_path):
     assert tmp_path.joinpath(".git", "hooks", "_pre-commit-parts").is_dir()
 
 
-def test_install_pre_commit_hook_command_line(tmp_path, monkeypatch):
+def test_install_pre_commit_hook_command_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     tmp_path.joinpath(".git").mkdir()
     monkeypatch.chdir(str(tmp_path))
     run(["--git-hooks"], 0)
     assert tmp_path.joinpath(".git", "hooks", "_pre-commit-parts").is_dir()
 
 
-def test_missing_bom_error_for_non_ascii_cpp(tmp_path):
+def test_missing_bom_error_for_non_ascii_cpp(tmp_path: Path) -> None:
     """
     Throws an error for not encoding with "UTF-8 with BOM" of non-ascii cpp file.
     """
@@ -504,7 +510,7 @@ def test_missing_bom_error_for_non_ascii_cpp(tmp_path):
     )
 
 
-def test_bom_encoded_for_non_ascii_cpp(tmp_path, dot_clang_format_to_tmp):
+def test_bom_encoded_for_non_ascii_cpp(tmp_path: Path, dot_clang_format_to_tmp: None) -> None:
     """
     Formats non-ascii cpp as usual, if it has 'UTF-8 encoding with BOM'
     """
@@ -518,7 +524,7 @@ def test_bom_encoded_for_non_ascii_cpp(tmp_path, dot_clang_format_to_tmp):
     assert obtained == "int ŢōŶ;"
 
 
-def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmp_path):
+def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmp_path: Path) -> None:
     """
     Won't format C++ if there's no `.clang-format` file in the directory or any directory above.
     """
@@ -530,7 +536,7 @@ def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_valid(tmp_pa
     assert obtained == source
 
 
-def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_invalid(tmp_path):
+def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_invalid(tmp_path: Path) -> None:
     source = "int   a;  "
     filename = tmp_path.joinpath("a.cpp")
     filename.write_text(source)
@@ -541,7 +547,7 @@ def test_use_legacy_formatter_when_there_is_no_dot_clang_format_for_invalid(tmp_
     assert obtained == "int   a;"
 
 
-def test_clang_format(tmp_path, dot_clang_format_to_tmp):
+def test_clang_format(tmp_path: Path, dot_clang_format_to_tmp: None) -> None:
     source = "int   a;  "
     filename = tmp_path.joinpath("a.cpp")
     filename.write_text(source)
@@ -552,7 +558,9 @@ def test_clang_format(tmp_path, dot_clang_format_to_tmp):
     assert obtained == "int a;"
 
 
-def test_missing_clang_format(tmp_path, mocker, dot_clang_format_to_tmp):
+def test_missing_clang_format(
+    tmp_path: Path, mocker: MockerFixture, dot_clang_format_to_tmp: None
+) -> None:
     source = "int   a;  "
     filename = tmp_path.joinpath("a.cpp")
     filename.write_text(source)
@@ -577,18 +585,14 @@ def test_missing_clang_format(tmp_path, mocker, dot_clang_format_to_tmp):
 
     # Check if the command-line instruction returned an exception
     # of type CalledProcessError with the correct error message
-    check_cli_error_output(
-        filename, expected_error_message, message_extra_details, formatter="clang-format"
-    )
+    check_cli_error_output(filename, expected_error_message, message_extra_details)
 
     # test should skip file, so no changes are made
     obtained = filename.read_text()
     assert obtained == source
 
 
-def run(args, expected_exit):
-    from _pytest.pytester import LineMatcher
-
+def run(args: Sequence[str], expected_exit: int) -> LineMatcher:
     runner = CliRunner()
     result = runner.invoke(cli.main, args)
     msg = "exit code %d != %d.\nOutput: %s" % (result.exit_code, expected_exit, result.output)
@@ -596,38 +600,41 @@ def run(args, expected_exit):
     return LineMatcher(result.output.splitlines())
 
 
-def fix_valid_file(input_file):
+def fix_valid_file(input_file: Path) -> None:
     output = run([str(input_file), "--verbose"], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ": Skipped")
 
 
-def _get_formatter_msg(formatter):
+def _get_formatter_msg(formatter: Optional[str]) -> str:
     return (" (%s)" % formatter) if formatter is not None else ""
 
 
-def check_valid_file(input_file, formatter=None):
+def check_valid_file(input_file: Path, formatter: Optional[str] = None) -> None:
     output = run(["--check", "--verbose", str(input_file)], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ": OK" + _get_formatter_msg(formatter))
 
 
-def fix_invalid_file(input_file, formatter=None):
+def fix_invalid_file(input_file: Path, formatter: Optional[str] = None) -> None:
     output = run([str(input_file), "--verbose"], expected_exit=0)
     output.fnmatch_lines(str(input_file) + ": Fixed" + _get_formatter_msg(formatter))
 
 
-def check_cli_error_output(input_file, expected_error_message, message_details, formatter=None):
+def check_cli_error_output(
+    input_file: Path, expected_error_message: str, message_details: str
+) -> None:
     output = run([str(input_file), "--verbose"], expected_exit=1)
-    msg = ": ERROR (CalledProcessError: %s): " % (expected_error_message)
-    msg += message_details
+    msg = f": ERROR (CalledProcessError: {expected_error_message}): {message_details}"
     output.fnmatch_lines(str(input_file) + msg)
 
 
-def check_invalid_file(input_file, formatter=None):
+def check_invalid_file(input_file: Path, formatter: Optional[str] = None) -> None:
     output = run(["--check", "--verbose", str(input_file)], expected_exit=1)
     output.fnmatch_lines(str(input_file) + ": Failed" + _get_formatter_msg(formatter))
 
 
-def test_find_pyproject_toml(tmp_path, monkeypatch, black_config):
+def test_find_pyproject_toml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, black_config: Path
+) -> None:
     os.remove(black_config)
     (tmp_path / "pA/p2/p3").mkdir(parents=True)
     (tmp_path / "pA/p2/p3/foo.py").touch()
@@ -652,10 +659,10 @@ def test_find_pyproject_toml(tmp_path, monkeypatch, black_config):
     assert cli.find_pyproject_toml([tmp_path / "pA/p2/p3/foo.py", tmp_path / "pX/p9"]) == root_toml
 
     monkeypatch.chdir(str(tmp_path / "pA/p2"))
-    assert cli.find_pyproject_toml(["."]) == root_toml
+    assert cli.find_pyproject_toml([Path(".")]) == root_toml
 
 
-def test_black_integration(tmp_path, sort_cfg_to_tmp):
+def test_black_integration(tmp_path: Path, sort_cfg_to_tmp: None) -> None:
     (tmp_path / "pyproject.toml").write_text("[tool.black]")
     input_source = "import six\n" "import os\n" "x = [1,\n" "   2,\n" "  3]\n" "\n" "\n" "\n"
     py_file = tmp_path / "foo.py"
@@ -686,10 +693,10 @@ def test_black_integration(tmp_path, sort_cfg_to_tmp):
             ]
         )
         obtained = py_file.read_text()
-        assert obtained == ("import os\n" "\n" "import six\n" "\n" "x = [1, 2, 3]\n")
+        assert obtained == "import os\n" "\n" "import six\n" "\n" "x = [1, 2, 3]\n"
 
 
-def test_skip_git_directory(input_file, tmp_path):
+def test_skip_git_directory(input_file: Path, tmp_path: Path) -> None:
     (tmp_path / ".git").mkdir()
     (tmp_path / ".git/dummy.py").touch()
     (tmp_path / ".git/dummy.cpp").touch()
@@ -698,7 +705,9 @@ def test_skip_git_directory(input_file, tmp_path):
     output.fnmatch_lines(["fix-format: 1 files changed, 0 files left unchanged."])
 
 
-def test_black_operates_on_chunks_on_windows(tmp_path, mocker, sort_cfg_to_tmp):
+def test_black_operates_on_chunks_on_windows(
+    tmp_path: Path, mocker: MockerFixture, sort_cfg_to_tmp: None
+) -> None:
     """Ensure black is being called in chunks of at most 100 files on Windows.
 
     On Windows there's a limit on command-line size, so we call black in chunks there. On Linux
@@ -709,12 +718,14 @@ def test_black_operates_on_chunks_on_windows(tmp_path, mocker, sort_cfg_to_tmp):
         (tmp_path / f"{i:03}_foo.py").touch()
 
     return_codes = [1, 0, 1, 0, 1, 0]  # make black return failures in some batches
-    mocker.patch.object(subprocess, "call", autospec=True, side_effect=return_codes)
+    subprocess_call_mock = mocker.patch.object(
+        subprocess, "call", autospec=True, side_effect=return_codes
+    )
     output = run([str(tmp_path), "--check"], expected_exit=1)
     output.fnmatch_lines(
         ["Checking black on 521 files...", "fix-format: 521 files would be left unchanged."]
     )
-    call_list = subprocess.call.call_args_list
+    call_list = subprocess_call_mock.call_args_list
     if sys.platform.startswith("win"):
         expected = 6  # 521 files in batches of 100.
     else:
@@ -722,7 +733,7 @@ def test_black_operates_on_chunks_on_windows(tmp_path, mocker, sort_cfg_to_tmp):
     assert len(call_list) == expected
 
 
-def test_exclude_patterns(tmp_path, monkeypatch):
+def test_exclude_patterns(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config_content = """[tool.esss_fix_format]
     exclude = [
         "src/drafts/*.py",
@@ -734,13 +745,13 @@ def test_exclude_patterns(tmp_path, monkeypatch):
     include_patterns = ["*.cpp", "*.py"]
     exclude_patterns = cli.read_exclude_patterns(config_file)
     monkeypatch.chdir(tmp_path)
-    assert not cli.should_format("src/drafts/foo.py", include_patterns, exclude_patterns)[0]
-    assert cli.should_format("src/drafts/foo.cpp", include_patterns, exclude_patterns)[0]
-    assert not cli.should_format("tmp/foo.cpp", include_patterns, exclude_patterns)[0]
-    assert cli.should_format("src/python/foo.py", include_patterns, exclude_patterns)[0]
+    assert not cli.should_format(Path("src/drafts/foo.py"), include_patterns, exclude_patterns)[0]
+    assert cli.should_format(Path("src/drafts/foo.cpp"), include_patterns, exclude_patterns)[0]
+    assert not cli.should_format(Path("tmp/foo.cpp"), include_patterns, exclude_patterns)[0]
+    assert cli.should_format(Path("src/python/foo.py"), include_patterns, exclude_patterns)[0]
 
 
-def test_invalid_exclude_patterns(tmp_path):
+def test_invalid_exclude_patterns(tmp_path: Path) -> None:
     config_content = """[tool.esss_fix_format]
     exclude = "src/drafts/*.py"
     """
@@ -750,7 +761,7 @@ def test_invalid_exclude_patterns(tmp_path):
     pytest.raises(TypeError, cli.read_exclude_patterns, config_file)
 
 
-def test_git_ignored_files(tmp_path):
+def test_git_ignored_files(tmp_path: Path) -> None:
     # Smoke test for the get_git_ignored_files() function
     root = Path(__file__).parent.parent
     assert root.joinpath(".git").is_dir()
@@ -761,7 +772,9 @@ def test_git_ignored_files(tmp_path):
     assert cli.get_git_ignored_files(tmp_path) == set()
 
 
-def test_git_ignored_files_integration(tmp_path, monkeypatch, sort_cfg_to_tmp):
+def test_git_ignored_files_integration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sort_cfg_to_tmp: None
+) -> None:
     # Write a file which is not properly formatted.
     content = textwrap.dedent(
         """
@@ -785,7 +798,9 @@ def test_git_ignored_files_integration(tmp_path, monkeypatch, sort_cfg_to_tmp):
     assert fn.read_text() == content
 
 
-def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
+def test_exclude_patterns_relative_path_fix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     config_content = """[tool.esss_fix_format]
     exclude = [
         "src/drafts/*.py",
@@ -800,11 +815,13 @@ def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
     monkeypatch.chdir(run_dir)
     include_patterns = ["*.py"]
     exclude_patterns = cli.read_exclude_patterns(config_file)
-    assert not cli.should_format("drafts/foo.py", include_patterns, exclude_patterns)[0]
+    assert not cli.should_format(Path("drafts/foo.py"), include_patterns, exclude_patterns)[0]
 
 
 @pytest.mark.skipif(os.name != "nt", reason="'subst' in only available on Windows")
-def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmp, black_config):
+def test_exclude_patterns_error_on_subst(
+    tmp_path: Path, request: pytest.FixtureRequest, sort_cfg_to_tmp: None, black_config: Path
+) -> None:
     import subprocess
 
     request.addfinalizer(lambda: subprocess.check_call(["subst", "/D", "Z:"]))
@@ -824,13 +841,13 @@ def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmp, bla
     run(["Z:", "--check"], expected_exit=0)
 
 
-def test_utf8_error_handling(tmp_path):
+def test_utf8_error_handling(tmp_path: Path) -> None:
     file_with_no_uft8 = tmp_path.joinpath("test.cpp")
     file_with_no_uft8.write_bytes("""é""".encode("UTF-16"))
 
     check_utf8_error(file_with_no_uft8)
 
 
-def check_utf8_error(file):
+def check_utf8_error(file: Path) -> None:
     output = run(["--check", "--verbose", str(file)], expected_exit=1)
     output.fnmatch_lines(str(file) + ": ERROR The file contents can not be decoded using UTF-8")

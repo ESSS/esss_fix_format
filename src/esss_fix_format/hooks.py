@@ -1,5 +1,6 @@
 import abc
 import textwrap
+from typing import Dict
 
 
 class GitHook(metaclass=abc.ABCMeta):
@@ -8,16 +9,14 @@ class GitHook(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def name(self):
+    def name(self) -> str:
         """
-        :rtype: unicode
         :return: Name of hook.
         """
 
     @abc.abstractmethod
-    def script(self):
+    def script(self) -> str:
         """
-        :rtype: unicode
         :return: Script code. Omit the shebang, as it is added later by a post-process step when
             hooks are installed in project.
         """
@@ -29,10 +28,10 @@ class FixFormatGitHook(GitHook):
     our `fix-format` tool.
     """
 
-    def name(self):
+    def name(self) -> str:
         return "fix-format"
 
-    def script(self):
+    def script(self) -> str:
         script = """\
         if ! which fix-format >/dev/null 2>&1
         then
@@ -54,7 +53,7 @@ class FixFormatGitHook(GitHook):
         return textwrap.dedent(script)
 
 
-def _add_hook(hook):
+def _add_hook(hook: GitHook) -> None:
     name = hook.name()
     if name not in _HOOKS:
         _HOOKS[name] = hook
@@ -63,14 +62,14 @@ def _add_hook(hook):
 
 
 # All hooks available by default
-_HOOKS = {}
+_HOOKS: Dict[str, GitHook] = {}
 _add_hook(FixFormatGitHook())
 
 
-def get_default_hook(name):
+def get_default_hook(name: str) -> GitHook:
     """
-    :param unicode name: Name of a hook.
-    :rtype: GitHook
+    :param name: Name of a hook.
+    :rtype:
     :return: A Git hook object.
     """
     return _HOOKS[name]
