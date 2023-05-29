@@ -8,10 +8,10 @@ with open("CHANGELOG.rst") as changelog_file:
     changelog = changelog_file.read()
 
 requirements = [
+    "boltons",
     "black",
     "click>=6.0",
     "isort",
-    "pydevf==0.1.5",
     "toml>=0.8.0",
 ]
 

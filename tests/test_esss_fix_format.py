@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import codecs
-import io
 import os
 import subprocess
 import sys
@@ -43,6 +42,7 @@ def input_file(tmpdir, sort_cfg_to_tmpdir):
             alpha
             bravo\\s\\t\\s
             charlie
+            if 0:
             \\tdelta
             echo
             foxtrot
@@ -60,6 +60,13 @@ def input_file(tmpdir, sort_cfg_to_tmpdir):
     return filename
 
 
+@pytest.fixture(autouse=True)
+def black_config(tmp_path):
+    fn = tmp_path.joinpath("pyproject.toml")
+    fn.write_text("[tool.black]\nline-length = 100")
+    return fn
+
+
 def test_command_line_interface(input_file):
     check_invalid_file(input_file)
     fix_invalid_file(input_file)
@@ -68,16 +75,10 @@ def test_command_line_interface(input_file):
     fix_valid_file(input_file)
 
 
-@pytest.mark.parametrize("eol", ["\n", "\r\n", "\r"], ids=["lf", "crlf", "cr"])
-def test_input_eol_preserved(input_file, eol):
-    contents = input_file.read("r")
-    contents = contents.replace("\n", eol)
-    input_file.write(contents.encode("ascii"), "wb")
-    check_invalid_file(input_file)
-    fix_invalid_file(input_file)
-
-    for line in io.open(str(input_file), newline="").readlines():
-        assert line.endswith(eol)
+def test_no_black_config(input_file, black_config):
+    os.remove(str(black_config))
+    output = run(["--check", "--verbose", str(input_file)], expected_exit=1)
+    output.fnmatch_lines("pyproject.toml not found or not configured for black.")
 
 
 def test_directory_command_line(input_file, tmpdir):
@@ -112,6 +113,7 @@ def test_fix_whitespace(input_file):
             alpha
             bravo
             charlie
+            if 0:
             \\s\\s\\s\\sdelta
             echo
             foxtrot
@@ -429,24 +431,6 @@ def test_missing_builtins(tmpdir, sort_cfg_to_tmpdir):
     )
 
 
-def test_force_parentheses(tmpdir, sort_cfg_to_tmpdir):
-    source = (
-        "from shutil import copyfileobj, copyfile, copymode, copystat,\\\n"
-        "    copymode, ignore_patterns, copytree, rmtree, move"
-    )
-    filename = tmpdir.join("test.py")
-    filename.write(source)
-    check_invalid_file(filename)
-    fix_invalid_file(filename)
-    check_valid_file(filename)
-    obtained = filename.read()
-    expected = (
-        "from shutil import (\n"
-        "    copyfile, copyfileobj, copymode, copystat, copytree, ignore_patterns, move, rmtree)"
-    )
-    assert obtained == expected
-
-
 def test_no_isort_cfg(tmpdir):
     filename = tmpdir.join("test.py")
     filename.write("import os", "w")
@@ -467,7 +451,7 @@ def test_no_isort_cfg(tmpdir):
 def test_isort_cfg_in_parent(tmpdir, monkeypatch):
     """
     This test checks that a configuration file is properly read from a parent directory.
-    This need to be checked because isort it self can fail to do this when passed a relative path.
+    This need to be checked because isort itself can fail to do this when passed a relative path.
     """
     # more than 81 character on the same line.
     source = (
@@ -493,6 +477,7 @@ def test_isort_cfg_in_parent(tmpdir, monkeypatch):
             "                    ignore_patterns,",
             "                    move,",
             "                    rmtree)",
+            "",
         ]
     )
     assert obtained == expected
@@ -658,12 +643,14 @@ def check_invalid_file(input_file, formatter=None):
     output.fnmatch_lines(str(input_file) + ": Failed" + _get_formatter_msg(formatter))
 
 
-def test_find_pyproject_toml(tmp_path, monkeypatch):
+def test_find_pyproject_toml(tmp_path, monkeypatch, black_config):
+    os.remove(black_config)
     (tmp_path / "pA/p2/p3").mkdir(parents=True)
     (tmp_path / "pA/p2/p3/foo.py").touch()
     (tmp_path / "pA/p2/p3/pyproject.toml").touch()
     (tmp_path / "pX/p9").mkdir(parents=True)
     (tmp_path / "pX/p9/pyproject.toml").touch()
+    monkeypatch.chdir(tmp_path)
 
     assert cli.find_pyproject_toml([tmp_path / "pA/p2/p3/foo.py", tmp_path / "pX/p9"]) is None
     assert cli.find_pyproject_toml([tmp_path / "pA/p2/p3"])
@@ -833,20 +820,22 @@ def test_exclude_patterns_relative_path_fix(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(os.name != "nt", reason="'subst' in only available on Windows")
-def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmpdir):
+def test_exclude_patterns_error_on_subst(tmp_path, request, sort_cfg_to_tmpdir, black_config):
     import subprocess
 
     request.addfinalizer(lambda: subprocess.check_call(["subst", "/D", "Z:"]))
     subprocess.check_call(["subst", "Z:", str(tmp_path)])
 
-    config_content = """[tool.esss_fix_format]
+    config_content = """
+    [tool.esss_fix_format]
     exclude = [
         "src/drafts/*.py",
         "tmp/*",
     ]
+    [tool.black]
+    line-length = 100
     """
-    config_file = tmp_path / "pyproject.toml"
-    config_file.write_text(config_content)
+    black_config.write_text(config_content)
     (tmp_path / "foo.py").touch()
     run(["Z:", "--check"], expected_exit=0)
 

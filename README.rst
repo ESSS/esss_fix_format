@@ -13,7 +13,7 @@ Simple code formatter and pre-commit checker used internally by ESSS.
 * Imports sorted using `isort <https://pypi.python.org/pypi/isort>`_
 * Trim right spaces
 * Expand tabs
-* Formats Python code using `PyDev Code Formatter <https://github.com/fabioz/PyDev.Formatter>`_ or `black <https://github.com/python/black>`__
+* Formats Python code using `black <https://github.com/python/black>`__
 * Formats C++ code using `clang-format <https://clang.llvm.org/docs/ClangFormat.html>`_ if a ``.clang-format`` file is available
 
 
@@ -75,11 +75,20 @@ A list of file name patterns to be excluded from the formatting. Patterns are ma
 Black
 ^^^^^
 
-Since version ``2.0.0`` it is possible to use `black <https://github.com/python/black>`__ as the
+Since version ``4.0.0`` `black <https://github.com/python/black>`__ is used as the
 code formatter for Python code.
 
-``fix-format`` will use ``black`` automatically if it finds a ``[tool.black]`` section declared in ``pyproject.toml``
-file.
+For consistentcy, ``fix-format`` requires a ``pyproject.toml`` at the root of your repository (recommended) or project.
+
+It is suggested to use minimal configuration, usually just line length:
+
+.. code-block:: toml
+
+    [tool.black]
+    line-length = 100
+
+A popular option is also ``skip-string-normalization = true``, which is recommended when migrating from
+other formatter to ``black``.
 
 See "Converting master to black" below for details.
 
@@ -299,7 +308,7 @@ Create a conda environment (using Python 3 here) and install it in development m
 
     $ conda install -n base conda-devenv
     $ conda devenv
-    $ source activate esss-fix-format-py36
+    $ source activate esss-fix-format-py310
     $ pre-commit install
     $ pytest
 

@@ -15,7 +15,6 @@ from typing import Tuple
 
 import boltons.iterutils
 import click
-import pydevf
 from isort.exceptions import FileSkipComment
 
 CPP_PATTERNS = {
@@ -95,7 +94,7 @@ def find_pyproject_toml(files_or_directories) -> Optional[Path]:
     upwards for a "pyproject.toml" file with a "[tool.black]" section.
     """
     if not files_or_directories:
-        return None
+        files_or_directories = [Path.cwd()]
     common = Path(os.path.commonpath(files_or_directories)).absolute()
     for p in [common] + list(common.parents):
         fn = p / "pyproject.toml"
@@ -222,27 +221,10 @@ def main(files_or_directories, check, stdin, commit, git_hooks, verbose):
         install_pre_commit_hook()  # uses the current directory by default.
         return
 
-    formatter = []
-
-    def format_code(code_to_format):
-        if not formatter:
-            _wait_current_processes()
-
-            # Start-up pydevf server on demand.
-            process = pydevf.start_format_server()
-            formatter.append(process)
-            _created_processes.append(process)
-        return pydevf.format_code_server(formatter[0], code_to_format)
-
-    try:
-        return _main(files_or_directories, check, stdin, commit, format_code, verbose=verbose)
-    finally:
-        if formatter:
-            # Stop pydevf if needed.
-            pydevf.stop_format_server(formatter[0])
+    return _main(files_or_directories, check, stdin, commit, verbose=verbose)
 
 
-def _process_file(filename, check, format_code, *, verbose):
+def _process_file(filename, check, *, verbose):
     """
     :returns: a tuple with (changed, errors, formatter):
         - `changed` is a boolean, True if the file was changed
@@ -349,15 +331,6 @@ def _process_file(filename, check, format_code, *, verbose):
             # The entire file was skipped by an "isort:skip_file"
             new_contents = original_contents
 
-        if format_code is not None:
-            try:
-                # Pass code formatter.
-                new_contents = format_code(new_contents)
-            except Exception as e:
-                error_msg = f"Error formatting code: {e}"
-                click.secho(error_msg, fg="red")
-                errors.append(error_msg)
-
         if new_contents and (new_contents[0] == codecs.BOM_UTF8.decode("UTF-8")):
             msg = ": ERROR python file should not have a BOM."
             error_msg = click.format_filename(filename) + msg
@@ -453,7 +426,7 @@ def get_git_ignored_files(directory: Path) -> Set[Path]:
         return result
 
 
-def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, verbose):
+def _main(files_or_directories, check, stdin, commit, *, verbose):
     if stdin:
         files = [x.strip() for x in click.get_text_stream("stdin").readlines()]
     elif commit:
@@ -478,22 +451,26 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
 
     files = sorted(Path(x) for x in files)
     errors = []
-
     pyproject_toml = find_pyproject_toml(files)
     if pyproject_toml:
         exclude_patterns = read_exclude_patterns(pyproject_toml)
     else:
         exclude_patterns = []
 
-    would_be_formatted = False
     if has_black_config(pyproject_toml):
-        # skip pydevf formatter
-        pydevf_format_func = None
         would_be_formatted, black_failed = run_black_on_python_files(
             files, check, exclude_patterns, verbose
         )
         if black_failed:
             errors.append("Error formatting black (see console)")
+    else:
+        click.secho("pyproject.toml not found or not configured for black.", fg="red")
+        click.secho("Create a pyproject.toml file and add a [tool.black] section.", fg="red")
+        click.secho("Suggestion:", fg="red")
+        click.secho("", fg="cyan")
+        click.secho("  [tool.black]", fg="cyan")
+        click.secho("  line-length = 100", fg="cyan")
+        sys.exit(1)
 
     changed_files = []
     analysed_files = []
@@ -506,9 +483,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
             continue
 
         analysed_files.append(filename)
-        changed, new_errors, formatter = _process_file(
-            filename, check, pydevf_format_func, verbose=verbose
-        )
+        changed, new_errors, formatter = _process_file(filename, check, verbose=verbose)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)

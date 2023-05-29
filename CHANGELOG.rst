@@ -2,6 +2,12 @@
 History
 =======
 
+4.0.0 (2022-05-29)
+------------------
+
+* Drop support for the ``pydev`` formatter. Now if the project does not contain a ``[tool.black]`` section, ``esss-fix-format``
+  will issue an error.
+
 3.2.0 (2021-01-12)
 ------------------
 
