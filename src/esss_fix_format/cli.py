@@ -7,15 +7,16 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Sequence
 from typing import Set
 from typing import Tuple
 
 import boltons.iterutils
 import click
-import pydevf
 from isort.exceptions import FileSkipComment
 
 CPP_PATTERNS = {
@@ -44,14 +45,16 @@ SKIP_DIRS = {
 }
 
 
-def is_cpp(filename):
+def is_cpp(filename: Path) -> bool:
     """Return True if the filename is of a type that should be treated as C++ source."""
     from fnmatch import fnmatch
 
     return any(fnmatch(os.path.basename(filename), p) for p in CPP_PATTERNS)
 
 
-def should_format(filename: str, include_patterns: Iterable[str], exclude_patterns: Iterable[str]):
+def should_format(
+    filename: Path, include_patterns: Iterable[str], exclude_patterns: Iterable[str]
+) -> Tuple[bool, str]:
     """
     Return a tuple (fmt, reason) where fmt is True if the filename should be formatted.
 
@@ -62,7 +65,7 @@ def should_format(filename: str, include_patterns: Iterable[str], exclude_patter
     :param exclude_patterns: list of file patterns to be excluded from formatting. Has precedence
         over `include_patterns`
 
-    :rtype: Tuple[bool, str]
+    :return: a tuple (should_format, reason).
     """
     from fnmatch import fnmatch
 
@@ -87,7 +90,7 @@ def should_format(filename: str, include_patterns: Iterable[str], exclude_patter
     return False, "Unknown file type"
 
 
-def find_pyproject_toml(files_or_directories) -> Optional[Path]:
+def find_pyproject_toml(files_or_directories: Sequence[Path]) -> Optional[Path]:
     """
     Searches for a valid pyproject.toml file based on the list of files/directories given.
 
@@ -95,7 +98,7 @@ def find_pyproject_toml(files_or_directories) -> Optional[Path]:
     upwards for a "pyproject.toml" file with a "[tool.black]" section.
     """
     if not files_or_directories:
-        return None
+        files_or_directories = [Path.cwd()]
     common = Path(os.path.commonpath(files_or_directories)).absolute()
     for p in [common] + list(common.parents):
         fn = p / "pyproject.toml"
@@ -104,7 +107,7 @@ def find_pyproject_toml(files_or_directories) -> Optional[Path]:
     return None
 
 
-def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
+def read_exclude_patterns(pyproject_toml: Path) -> Sequence[str]:
     import tomli
 
     with pyproject_toml.open("rb") as f:
@@ -116,7 +119,7 @@ def read_exclude_patterns(pyproject_toml: Path) -> List[str]:
             f"pyproject.toml excludes option must be a list, got {type(excludes_option)})"
         )
 
-    def ensure_abspath(p):
+    def ensure_abspath(p: str) -> str:
         return os.path.join(pyproject_toml.parent, p) if not os.path.isabs(p) else p
 
     excludes_option = [ensure_abspath(p) for p in excludes_option]
@@ -131,22 +134,23 @@ def has_black_config(pyproject_toml: Optional[Path]) -> bool:
 
 # caches which directories have the `.clang-format` file, *in or above it*, to avoid hitting the
 # disk too many times
-__HAS_DOT_CLANG_FORMAT = dict()
+__HAS_DOT_CLANG_FORMAT: Dict[str, bool] = dict()
 
 
-def should_use_clang_format(filename):
-    filename = os.path.abspath(filename)
-    path_components = filename.split(os.sep)[:-1]
+def should_use_clang_format(filename: Path) -> bool:
+    filename = filename.absolute()
+    path_components = str(filename).split(os.sep)[:-1]
     paths_to_try = tuple(
         os.sep.join(path_components[:i] + [".clang-format"])
         for i in range(1, len(path_components) + 1)
     )
 
     # From file directory, going upwards, find the first directory already cached
+    has_it = False
     for i in range(len(paths_to_try) - 1, -1, -1):
         path = paths_to_try[i]
-        has_it = __HAS_DOT_CLANG_FORMAT.get(path, None)
-        if has_it is not None:
+        if path in __HAS_DOT_CLANG_FORMAT:
+            has_it = __HAS_DOT_CLANG_FORMAT[path]
             break
 
     if has_it:
@@ -161,36 +165,6 @@ def should_use_clang_format(filename):
         found = __HAS_DOT_CLANG_FORMAT[path] = os.path.isfile(path)
 
     return found
-
-
-_created_processes = []
-
-
-def _wait_current_processes():
-    """
-    Note: before actually starting a new process, make sure the previous have been
-    collected. This should not really be a problem in practice, but when running unit-
-    tests on windows starting a new process while another is on shutdown can sometimes
-    raise:
-
-    [WinError 6] The handle is invalid error
-
-    inside of subprocess.Popen when launching the new javaw executable (haven't been able
-    to find the reason this happens).
-    """
-    if _created_processes:
-        import time
-
-        for process in _created_processes:
-            curr_time = time.time()
-            while process.poll() is None:
-                time.sleep(0.05)
-                if time.time() - curr_time > 3:
-                    raise AssertionError(
-                        "Unable to run because a previously created formatter "
-                        "process has not been properly killed."
-                    )
-        del _created_processes[:]
 
 
 @click.command()
@@ -213,7 +187,14 @@ def _wait_current_processes():
 @click.option(
     "-v", "--verbose", default=False, is_flag=True, help="Show skipped files in the output"
 )
-def main(files_or_directories, check, stdin, commit, git_hooks, verbose):
+def main(
+    files_or_directories: Sequence[Path],
+    check: bool,
+    stdin: bool,
+    commit: bool,
+    git_hooks: bool,
+    verbose: bool,
+) -> None:
     """Fixes and checks formatting according to ESSS standards."""
 
     if git_hooks:
@@ -222,27 +203,12 @@ def main(files_or_directories, check, stdin, commit, git_hooks, verbose):
         install_pre_commit_hook()  # uses the current directory by default.
         return
 
-    formatter = []
-
-    def format_code(code_to_format):
-        if not formatter:
-            _wait_current_processes()
-
-            # Start-up pydevf server on demand.
-            process = pydevf.start_format_server()
-            formatter.append(process)
-            _created_processes.append(process)
-        return pydevf.format_code_server(formatter[0], code_to_format)
-
-    try:
-        return _main(files_or_directories, check, stdin, commit, format_code, verbose=verbose)
-    finally:
-        if formatter:
-            # Stop pydevf if needed.
-            pydevf.stop_format_server(formatter[0])
+    sys.exit(_main(files_or_directories, check=check, stdin=stdin, commit=commit, verbose=verbose))
 
 
-def _process_file(filename, check, format_code, *, verbose):
+def _process_file(
+    filename: Path, *, check: bool, verbose: bool
+) -> Tuple[bool, Sequence[str], Optional[str]]:
     """
     :returns: a tuple with (changed, errors, formatter):
         - `changed` is a boolean, True if the file was changed
@@ -349,15 +315,6 @@ def _process_file(filename, check, format_code, *, verbose):
             # The entire file was skipped by an "isort:skip_file"
             new_contents = original_contents
 
-        if format_code is not None:
-            try:
-                # Pass code formatter.
-                new_contents = format_code(new_contents)
-            except Exception as e:
-                error_msg = f"Error formatting code: {e}"
-                click.secho(error_msg, fg="red")
-                errors.append(error_msg)
-
         if new_contents and (new_contents[0] == codecs.BOM_UTF8.decode("UTF-8")):
             msg = ": ERROR python file should not have a BOM."
             error_msg = click.format_filename(filename) + msg
@@ -378,7 +335,9 @@ def _process_file(filename, check, format_code, *, verbose):
     return changed, errors, formatter
 
 
-def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[bool, bool]:
+def run_black_on_python_files(
+    files: Sequence[Path], check: bool, exclude_patterns: Sequence[str], verbose: bool
+) -> Tuple[bool, bool]:
     """
     Runs black on the given files (checking or formatting).
 
@@ -391,7 +350,7 @@ def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[
 
     :return: a pair (would_be_formatted, black_failed)
     """
-    py_files = [x for x in files if should_format(str(x), ["*.py"], exclude_patterns)[0]]
+    py_files = [x for x in files if should_format(x, ["*.py"], exclude_patterns)[0]]
     black_failed = False
     would_be_formatted = False
     if py_files:
@@ -401,7 +360,7 @@ def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[
             click.secho(f"Running black on {len(py_files)} files...", fg="cyan")
         # On Windows there's a limit on the command-line size, so we call black in batches
         # this should only be an issue when executing fix-format over the entire repository,
-        # not on day to day usage.
+        # not on day-to-day usage.
         # Once black grows a public API (https://github.com/psf/black/issues/779), we can
         # ditch running things in a subprocess altogether.
         if sys.platform.startswith("win"):
@@ -428,9 +387,12 @@ def run_black_on_python_files(files, check, exclude_patterns, verbose) -> Tuple[
 def get_git_ignored_files(directory: Path) -> Set[Path]:
     """Return a set() of git-ignored files if ``directory`` is tracked by git."""
     try:
+        git_path = shutil.which("git")
+        if git_path is None:
+            return set()
         output = subprocess.check_output(
             [
-                shutil.which("git"),
+                git_path,
                 "status",
                 "--ignored",
                 "--untracked-files=all",
@@ -453,11 +415,14 @@ def get_git_ignored_files(directory: Path) -> Set[Path]:
         return result
 
 
-def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, verbose):
+def _main(
+    files_or_directories: Sequence[Path], *, check: bool, stdin: bool, commit: bool, verbose: bool
+) -> int:
+    files: List[Path]
     if stdin:
-        files = [x.strip() for x in click.get_text_stream("stdin").readlines()]
+        files = [Path(x.strip()) for x in click.get_text_stream("stdin").readlines()]
     elif commit:
-        files = get_files_from_git()
+        files = list(get_files_from_git())
     else:
         files = []
         for file_or_dir in files_or_directories:
@@ -468,9 +433,9 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
                         if dirname in SKIP_DIRS:
                             dirs.remove(dirname)
                     files.extend(
-                        os.path.join(root, n)
+                        Path(root, n)
                         for n in names
-                        if should_format(n, PATTERNS, [])
+                        if should_format(Path(n), PATTERNS, [])
                         and Path(root, n).absolute() not in git_ignored
                     )
             else:
@@ -478,27 +443,30 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
 
     files = sorted(Path(x) for x in files)
     errors = []
-
     pyproject_toml = find_pyproject_toml(files)
     if pyproject_toml:
         exclude_patterns = read_exclude_patterns(pyproject_toml)
     else:
         exclude_patterns = []
 
-    would_be_formatted = False
     if has_black_config(pyproject_toml):
-        # skip pydevf formatter
-        pydevf_format_func = None
         would_be_formatted, black_failed = run_black_on_python_files(
             files, check, exclude_patterns, verbose
         )
         if black_failed:
             errors.append("Error formatting black (see console)")
+    else:
+        click.secho("pyproject.toml not found or not configured for black.", fg="red")
+        click.secho("Create a pyproject.toml file and add a [tool.black] section.", fg="red")
+        click.secho("Suggestion:", fg="red")
+        click.secho("", fg="cyan")
+        click.secho("  [tool.black]", fg="cyan")
+        click.secho("  line-length = 100", fg="cyan")
+        return 1
 
     changed_files = []
     analysed_files = []
     for filename in files:
-        filename = str(filename)
         fmt, reason = should_format(filename, PATTERNS, exclude_patterns)
         if not fmt:
             if verbose:
@@ -506,9 +474,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
             continue
 
         analysed_files.append(filename)
-        changed, new_errors, formatter = _process_file(
-            filename, check, pydevf_format_func, verbose=verbose
-        )
+        changed, new_errors, formatter = _process_file(filename, check=check, verbose=verbose)
         errors.extend(new_errors)
         if changed:
             changed_files.append(filename)
@@ -519,7 +485,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
                 msg += " (" + formatter + ")"
             click.secho(msg, fg=color)
 
-    def banner(caption):
+    def banner(caption: str) -> str:
         caption = " %s " % caption
         fill = (100 - len(caption)) // 2
         h = "=" * fill
@@ -530,7 +496,7 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
         click.secho(banner("ERRORS"), fg="red")
         for error_msg in errors:
             click.secho(error_msg, fg="red")
-        sys.exit(1)
+        return 1
 
     # show a summary of what has been done
     verb = "would be " if check else ""
@@ -546,10 +512,12 @@ def _main(files_or_directories, check, stdin, commit, pydevf_format_func, *, ver
     )
 
     if check and (changed_files or would_be_formatted):
-        sys.exit(1)
+        return 1
+
+    return 0
 
 
-def _get_status_and_color(check, changed):
+def _get_status_and_color(check: bool, changed: bool) -> Tuple[str, str]:
     """
     Return a pair (status message, color) based if we are checking a file for correct
     formatting and if the file is supposed to be changed or not.
@@ -566,15 +534,15 @@ def _get_status_and_color(check, changed):
             return "Skipped", "yellow"
 
 
-def fix_whitespace(lines, eol, ends_with_eol):
+def fix_whitespace(lines: Sequence[str], eol: str, ends_with_eol: bool) -> str:
     """
     Fix whitespace issues in the given list of lines.
 
-    :param list[unicode] lines:
+    :param lines:
         List of lines to fix spaces and indentations.
-    :param unicode eol:
+    :param eol:
         EOL of file.
-    :param bool ends_with_eol:
+    :param ends_with_eol:
         If file ends with EOL.
 
     :rtype: unicode
@@ -589,7 +557,7 @@ def fix_whitespace(lines, eol, ends_with_eol):
     return result
 
 
-def _strip(lines):
+def _strip(lines: Sequence[str]) -> Sequence[str]:
     """
     Splits the given text, removing the original eol but returning the eol
     so it can be written again on disk using the original eol.
@@ -603,7 +571,7 @@ def _strip(lines):
     return lines
 
 
-def _peek_eol(line):
+def _peek_eol(line: str) -> str:
     """
     :param unicode line: A line in file.
     :rtype: unicode
@@ -618,23 +586,19 @@ def _peek_eol(line):
     return eol
 
 
-def get_files_from_git():
+def get_files_from_git() -> Sequence[Path]:
     """Obtain from a list of modified files in the current repository."""
 
-    def get_files(cmd):
+    def get_files(cmd: str) -> Sequence[str]:
         output = subprocess.check_output(cmd, shell=True)
-        return output.splitlines()
+        return [os.fsdecode(x) for x in output.splitlines()]
 
-    root = subprocess.check_output("git rev-parse --show-toplevel", shell=True).strip()
-    result = set()
+    root = os.fsdecode(subprocess.check_output("git rev-parse --show-toplevel", shell=True).strip())
+    result: Set[str] = set()
     result.update(get_files("git diff --name-only --diff-filter=ACM --staged"))
     result.update(get_files("git diff --name-only --diff-filter=ACM"))
     result.update(get_files("git ls-files -o --full-name --exclude-standard"))
-    # check_output returns bytes in Python 3
-    if sys.version_info[0] > 2:
-        result = [os.fsdecode(x) for x in result]
-        root = os.fsdecode(root)
-    return sorted(os.path.join(root, x) for x in result)
+    return sorted(Path(root, x) for x in result)
 
 
 if __name__ == "__main__":

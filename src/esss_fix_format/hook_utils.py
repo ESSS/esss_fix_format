@@ -1,13 +1,18 @@
 import io
 import os.path
+from typing import Optional
+from typing import Union
+
+from esss_fix_format.hooks import get_default_hook
+from esss_fix_format.hooks import GitHook
 
 
-def find_ancestor_dir_with(filename, begin_in=None):
+def find_ancestor_dir_with(filename: str, begin_in: Optional[str] = None) -> Optional[str]:
     """
     Look in current and ancestor directories (parent, parent of parent, ...) for a file.
 
-    :param unicode filename: File to find.
-    :param unicode begin_in: Directory to start searching.
+    :param filename: File to find.
+    :param begin_in: Directory to start searching.
 
     :rtype: unicode
     :return: Absolute path to directory where file is located.
@@ -29,7 +34,7 @@ def find_ancestor_dir_with(filename, begin_in=None):
         base_directory = parent_base_directory
 
 
-def add_hook(parts_dir, git_hook):
+def add_hook(parts_dir: str, git_hook: Union[str, GitHook]) -> None:
     """
     Adds an individual hook file to a folder with hook parts. An added hook is going to be executed
     by Git hooks like `pre-commit`, for instance, when installed using `invoke hooks` in a project.
@@ -41,14 +46,12 @@ def add_hook(parts_dir, git_hook):
     * it prefixes hook file with a header containing the shebang and a message printed to let
       developers name of hook in progress.
 
-    :param unicode parts_dir: Folder containing hook files.
-    :param GitHook|unicode git_hook: A git hook or its name. Name notation can only be used
+    :param parts_dir: Folder containing hook files.
+    :param git_hook: A git hook or its name. Name notation can only be used
         by hooks available by default though (see `hooks` to learn more).
     """
     import glob
     import stat
-
-    from esss_fix_format.hooks import GitHook, get_default_hook
 
     if not isinstance(git_hook, GitHook):
         git_hook = get_default_hook(git_hook)
@@ -64,14 +67,14 @@ def add_hook(parts_dir, git_hook):
     os.chmod(part_path, os.stat(part_path).st_mode | stat.S_IXUSR)
 
 
-def add_default_pre_commit_hooks(pre_commit_parts_dir):
+def add_default_pre_commit_hooks(pre_commit_parts_dir: str) -> None:
     """
-    :param unicode pre_commit_parts_dir: Folder containing hook files.
+    :param pre_commit_parts_dir: Folder containing hook files.
     """
     add_hook(pre_commit_parts_dir, "fix-format")
 
 
-def install_pre_commit_hook(git_dir=None):
+def install_pre_commit_hook(git_dir: Optional[str] = None) -> None:
     """
     Install Git hooks in a project.
     """
@@ -83,7 +86,7 @@ def install_pre_commit_hook(git_dir=None):
     # This folder is (re)created every time hooks are installed. It runs all parts, even if one
     # of them fails. If any part fails, pre-commit exits as failure.
     git_root = find_ancestor_dir_with(".git", git_dir)
-
+    assert git_root is not None
     git_root = os.path.abspath(git_root)
     project_name = os.path.basename(git_root)
     print(f"{project_name} hooks")

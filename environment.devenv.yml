@@ -1,5 +1,6 @@
-{% set CONDA_PY = os.environ.get('CONDA_PY', '36') %}
-name: esss-fix-format-py{{ CONDA_PY }}
+{% set CONDA_PY = os.environ['CONDA_PY']  %}
+{% set PY = CONDA_PY | int  %}
+name: esss-fix-format-py{{ PY }}
 
 dependencies:
   # run
@@ -7,12 +8,13 @@ dependencies:
   - clangdev>=6.0.1
   - click>=6.0
   - isort>=5.0
-  - python={{ '.'.join(CONDA_PY) }}
-  - pydevf==0.1.5
+  - python=3.{{ CONDA_PY[1:] }}
   - tomli
 
-  # Last version which still supports Python 3.6.
-  - platformdirs <=2.4
+  - attrs <=20  # [PY==36]
+  - platformdirs <=2.4  # [PY==36]
+  - typing-extensions <4  # [PY==36]
+  - typing-extensions <5.11  # [PY==36]
 
   # develop
   - black
