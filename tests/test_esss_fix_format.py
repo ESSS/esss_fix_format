@@ -354,7 +354,7 @@ def test_python_with_bom(tmp_path: Path, sort_cfg_to_tmp: None, check: bool) -> 
     "source",
     [
         "",
-        '"""\nisort:skip_file\n"""\nimport sys\nimport os\n',
+        '"""\nisort:skip_file\n"""\n\nimport sys\nimport os\n',
         "# isort:skip_file\nimport sys\nimport os\n",
     ],
     ids=[
