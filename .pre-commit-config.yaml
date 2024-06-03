@@ -16,7 +16,7 @@ repos:
     -   id: end-of-file-fixer
     -   id: debug-statements
 -   repo: https://github.com/asottile/reorder-python-imports
-    rev: v3.12.0
+    rev: v3.13.0
     hooks:
     -   id: reorder-python-imports
         args: ['--application-directories=.:src:tests', --py36-plus]
