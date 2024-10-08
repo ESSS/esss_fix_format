@@ -2,6 +2,11 @@
 esss_fix_format
 ===============================
 
+Important
+---------
+
+Since then we have moved to pre-commit and standard tools, so this tool is no longer being maintained.
+
 .. image:: https://github.com/ESSS/esss_fix_format/workflows/linux/badge.svg
   :target: https://github.com/ESSS/esss_fix_format/actions?query=workflow%3Alinux
 
